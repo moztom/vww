@@ -1,0 +1,11 @@
+__pycache__
+runs/
+exports/
+results/
+data/
+*.mlmodel
+*.onnx
+*.tflite
+Pipfile
+Pipfile.lock
+.DS_Store

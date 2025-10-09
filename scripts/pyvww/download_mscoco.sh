@@ -30,11 +30,7 @@ if [ -z "$1" ]; then
   exit
 fi
 
-if [ "$(uname)" == "Darwin" ]; then
-  UNZIP="unzip -nq"
-else
-  UNZIP="unzip -nq"
-fi
+UNZIP="unzip -nq"
 
 # Create the output directories.
 OUTPUT_DIR="${1%/}"

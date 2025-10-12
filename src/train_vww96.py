@@ -97,10 +97,10 @@ def build_loaders(data_root: Path, batch: int, num_workers: int):
 
     train_tf = transforms.Compose([
         transforms.RandomHorizontalFlip(), # randomly flip some training images
-        #transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
         transforms.ToTensor(),
         transforms.Normalize(MEAN, STD),
-        #transforms.RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3)),
+        transforms.RandomErasing(p=0.25, scale=(0.02, 0.08), ratio=(0.3, 3.3)),
     ])
     val_tf = transforms.Compose([
         transforms.ToTensor(),
@@ -262,7 +262,7 @@ def main():
 
         log_epoch(writer, run_dir, epoch, tr_loss=tr_loss, tr_acc=tr_acc, va_loss=va_loss, va_acc=va_acc, lr=optimizer.param_groups[0]["lr"])
 
-        print(f"[{epoch:03d}/{args.epochs}] "
+        print(f"[{epoch}/{args.epochs}] "
               f"train loss {tr_loss:.4f} acc {tr_acc:.4f} | "
               f"val loss {va_loss:.4f} acc {va_acc:.4f} | "
               f"epoch {epoch_elapsed:.1f}s | elapsed {elapsed_total/60:.1f}m")
@@ -305,7 +305,7 @@ def main():
     # Save confusion matrix to JSON
     cm_path = run_dir / "confusion_matrix.json"
     with open(cm_path, "w") as f:
-        json.dump({"labels": labels, "matrix": cm.tolist(), "target_names": target_names}, f)
+        json.dump({"key": "(rows = true [0,1], cols = pred [0,1])", "matrix": cm.tolist(), "target_names": target_names}, f)
 
     # Close TensorBoard writer
     writer.flush(); writer.close()

@@ -49,13 +49,13 @@ RandomErasing(p=0.25, scale=(0.02, 0.08), ratio=(0.3, 3.3))
 
 **Result:**
 val_acc=0.7646 @ epoch 14
+lower epoch 15 so overfit
 
 **Confusion highlights:**
-**Next step:** try stronger aug, label smoothing, longer train (30e)
 
 ---
 
-**Run:** (3)
+**Run:** (3) 2025-10-12_19-13-56_mbv3-baseline
 
 **Goal:** Improve accuracy
 **Change vs prev:**
@@ -80,9 +80,38 @@ ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2)
 RandomErasing(p=0.25, scale=(0.02, 0.08), ratio=(0.3, 3.3))
 
 **Result:**
-val_acc=0.7646 @ epoch 14
+val_acc=0.8072 @ epoch 14
+lower epoch 15 so overfit
 
 **Confusion highlights:**
-**Next step:** try stronger aug, label smoothing, longer train (30e)
+
+---
+
+**Run:** (4)
+
+**Goal:** Improve accuracy further
+**Change vs prev:**
+Changed scheduler to OneCycleLR
+Tweaked random erasing data aug (0.08->0.12)
+
+**Config:**
+96×96
+bs=256
+15 epochs
+lr=1e-3
+Optimiser: AdamW
+Loss fcn: CrossEntropyLoss
+scheduler: OneCycleLR
+seed=42
+
+**Data:**
+Dataset mean/std normalization
+RandomHorizontalFlip
+ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2)
+RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3))
+
+**Result:**
+
+**Confusion highlights:**
 
 ---

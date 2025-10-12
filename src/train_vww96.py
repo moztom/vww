@@ -13,6 +13,8 @@ from sklearn.metrics import classification_report, confusion_matrix
 from torch.amp import GradScaler, autocast
 from contextlib import nullcontext
 
+from model import build_model
+
 # -----------------------
 # 1) Helpers
 # -----------------------
@@ -100,7 +102,7 @@ def build_loaders(data_root: Path, batch: int, num_workers: int):
         transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
         transforms.ToTensor(),
         transforms.Normalize(MEAN, STD),
-        transforms.RandomErasing(p=0.25, scale=(0.02, 0.08), ratio=(0.3, 3.3)),
+        transforms.RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3)),
     ])
     val_tf = transforms.Compose([
         transforms.ToTensor(),
@@ -133,14 +135,6 @@ def build_loaders(data_root: Path, batch: int, num_workers: int):
 
     return train_loader, val_loader, class_weight_tensor
 
-# -----------------------
-# 3) Model
-# -----------------------
-def build_model(num_classes=2):
-    # 96-native: use MobileNetV3-Small from scratch (weights=None)
-    model = mobilenet_v3_small(weights=None)
-    model.classifier[-1] = nn.Linear(model.classifier[-1].in_features, num_classes) # change final layer to 2 classes
-    return model
 
 # -----------------------
 # 4) Train/Eval
@@ -237,8 +231,12 @@ def main():
     # AdamW optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
 
-    # Simple schedule; feels good for 10–30 epochs
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+    # Scheduler: OneCycle with cosine annealing
+    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+        optimizer, max_lr=1e-3, epochs=args.epochs, steps_per_epoch=len(train_loader),
+        pct_start=0.10, div_factor=25.0, final_div_factor=1e4, anneal_strategy="cos"
+    )
 
     # Enables automatic mixed precision. Set --no_amp to disable (slower, but worth trying))
     use_amp = (device == "cuda") and (not args.no_amp)

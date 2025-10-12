@@ -1,3 +1,5 @@
+# Computes the mean and std of the VWW96 training set.
+#
 # Run from inside scripts/ directory.
 # Usage: python compute_mean_std.py
 

@@ -21,7 +21,7 @@ def parse_args():
     ap.add_argument("--data", type=Path, required=True, help="Path to vww96 root (contains train/ val/)")
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--batch", type=int, default=256)
-    ap.add_argument("--lr", type=float, default=3e-4)
+    ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--num_workers", type=int, default=4)
     ap.add_argument("--out", type=Path, default=Path("runs"))
     ap.add_argument("--no_amp", action="store_true", help="Disable mixed precision")
@@ -232,10 +232,10 @@ def main():
 
     # Define loss function (cross-entropy)
     # change to weight=None if not using sampler (i.e. class_weight_tensor is always None)
-    criterion = nn.CrossEntropyLoss(weight=class_weight_tensor.to(device) if class_weight_tensor is not None else None) #, label_smoothing=0.05
+    criterion = nn.CrossEntropyLoss(weight=class_weight_tensor.to(device) if class_weight_tensor is not None else None, label_smoothing=0.05)
     
     # AdamW optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr) #, weight_decay=1e-4
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
 
     # Simple schedule; feels good for 10–30 epochs
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)

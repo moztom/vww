@@ -87,21 +87,22 @@ lower epoch 15 so overfit
 
 ---
 
-**Run:** (4)
+**Run:** (4) 2025-10-12_21-32-58_mbv3-baseline
 
 **Goal:** Improve accuracy further
 **Change vs prev:**
 Changed scheduler to OneCycleLR
-Tweaked random erasing data aug (0.08->0.12)
+Tweaked random erasing (scale 0.08->0.12)
+More epoches due to OneCycleLR (30)
 
 **Config:**
 96×96
 bs=256
-15 epochs
+30 epochs
 lr=1e-3
-Optimiser: AdamW
-Loss fcn: CrossEntropyLoss
-scheduler: OneCycleLR
+Optimiser: AdamW - weight_decay=1e-4
+Loss fcn: CrossEntropyLoss - label_smoothing=0.05
+scheduler: OneCycleLR - max_lr=1e-3, pct_start=0.10, div_factor=25.0, final_div_factor=1e4, anneal_strategy="cos"
 seed=42
 
 **Data:**
@@ -111,6 +112,43 @@ ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2)
 RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3))
 
 **Result:**
+val_acc=0.8121 @ epoch 19
+oscillated after epoch 19 without improving
+
+no person recall: 0.84
+person recall: 0.77
+
+**Confusion highlights:**
+
+---
+
+**Run:** (5)
+
+**Goal:** Attempt to reduce oscillation
+**Change vs prev:**
+OneCycleLR paramters: pct_start -> 0.05, div_factor -> 20.0
+
+**Config:**
+96×96
+bs=256
+30 epochs
+lr=1e-3
+Optimiser: AdamW - weight_decay=1e-4
+Loss fcn: CrossEntropyLoss - label_smoothing=0.05
+scheduler: OneCycleLR - max_lr=1e-3, pct_start=0.05, div_factor=20.0, final_div_factor=1e4, anneal_strategy="cos"
+seed=42
+
+**Data:**
+Dataset mean/std normalization
+RandomHorizontalFlip
+ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2)
+RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3))
+
+**Result:**
+val_acc= @ epoch
+
+no person recall:
+person recall:
 
 **Confusion highlights:**
 

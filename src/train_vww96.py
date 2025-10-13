@@ -13,7 +13,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 from torch.amp import GradScaler, autocast
 from contextlib import nullcontext
 
-from model import build_model
+from model import build_model as build_model_external
 
 # -----------------------
 # 1) Helpers
@@ -102,7 +102,7 @@ def build_loaders(data_root: Path, batch: int, num_workers: int):
         transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
         transforms.ToTensor(),
         transforms.Normalize(MEAN, STD),
-        transforms.RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3)),
+        transforms.RandomErasing(p=0.25, scale=(0.02, 0.08), ratio=(0.3, 3.3)),
     ])
     val_tf = transforms.Compose([
         transforms.ToTensor(),
@@ -137,13 +137,24 @@ def build_loaders(data_root: Path, batch: int, num_workers: int):
 
 
 # -----------------------
+# 3) Model
+# -----------------------
+def build_model(num_classes=2):
+    # 96-native: use MobileNetV3-Small from scratch (weights=None)
+    model = mobilenet_v3_small(weights=None)
+    model.classifier[-1] = nn.Linear(model.classifier[-1].in_features, num_classes) # change final layer to 2 classes
+    return model
+
+
+# -----------------------
 # 4) Train/Eval
 # -----------------------
-def train_one_epoch(model, loader, optimizer, criterion, device, scaler: GradScaler | None):
+def train_one_epoch(model, loader, optimizer, criterion, device, scaler: GradScaler | None, scheduler=None):
 
     model.train()
     total, correct, loss_sum = 0, 0, 0.0
 
+    # Iterate over batches
     for imgs, labels in loader:
 
         # Transfer images/labels to device (GPU/CPU/MPS)
@@ -168,6 +179,9 @@ def train_one_epoch(model, loader, optimizer, criterion, device, scaler: GradSca
             scaler.scale(loss).backward() # backward pass with loss scaling
             scaler.step(optimizer) # optimizer step
             scaler.update() # update scale for next iteration
+
+        if scheduler is not None:
+            scheduler.step()
             
         loss_sum += loss.item() * labels.size(0) # sum up batch loss
         correct += (logits.argmax(1) == labels).sum().item() # count correct
@@ -222,6 +236,7 @@ def main():
         args.data, args.batch, args.num_workers
     )
 
+    #model = build_model_external(num_classes=2, mean=None, std=None).to(device)
     model = build_model(num_classes=2).to(device)
 
     # Define loss function (cross-entropy)
@@ -232,10 +247,11 @@ def main():
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
 
     # Scheduler: OneCycle with cosine annealing
+    # NOTE: switch back step() if changing back to CosineAnnealingLR
     #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, max_lr=1e-3, epochs=args.epochs, steps_per_epoch=len(train_loader),
-        pct_start=0.10, div_factor=25.0, final_div_factor=1e4, anneal_strategy="cos"
+        pct_start=0.05, div_factor=20.0, final_div_factor=1e4, anneal_strategy="cos"
     )
 
     # Enables automatic mixed precision. Set --no_amp to disable (slower, but worth trying))
@@ -252,9 +268,10 @@ def main():
     overall_start = time.perf_counter()
     for epoch in range(1, args.epochs + 1):
         epoch_start = time.perf_counter()
-        tr_loss, tr_acc = train_one_epoch(model, train_loader, optimizer, criterion, device, scaler)
+        tr_loss, tr_acc = train_one_epoch(model, train_loader, optimizer, criterion, device, scaler, scheduler)
         va_loss, va_acc, preds, gts = evaluate(model, val_loader, device)
-        scheduler.step()
+        ## ADD THIS BACK FOR COSINE ANNEALING
+        #scheduler.step()
         epoch_elapsed = time.perf_counter() - epoch_start
         elapsed_total = time.perf_counter() - overall_start
 
@@ -299,6 +316,7 @@ def main():
     # Save final metrics to metrics.jsonl
     with open(run_dir / "metrics.jsonl", "a") as f:
         f.write(json.dumps({"best_epoch": best_epoch, "best_val_acc": best_acc, "total_train_time": total_elapsed}) + "\n")
+        f.write(json.dumps({"classification_report": report}) + "\n")
 
     # Save confusion matrix to JSON
     cm_path = run_dir / "confusion_matrix.json"

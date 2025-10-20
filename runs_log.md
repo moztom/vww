@@ -1,6 +1,7 @@
 **Run:** (1) 2025-10-12_17-06-49_mbv3-baseline
 
 **Goal:** Establish baseline MobileNetV3-Small on VWW96
+
 **Change vs prev:** First run
 
 **Config:**
@@ -29,6 +30,7 @@ Overfit after epoch 7
 **Run:** (2) 2025-10-12_17-52-59_mbv3-baseline
 
 **Goal:** Improve accuracy and reduce overfit
+
 **Change vs prev:** 15 epochs and more data aug - (ColorJitter, RandomErasing)
 
 **Config:**
@@ -58,6 +60,7 @@ lower epoch 15 so overfit
 **Run:** (3) 2025-10-12_19-13-56_mbv3-baseline
 
 **Goal:** Improve accuracy
+
 **Change vs prev:**
 Label smoothing (0.05) on loss function
 Weight decay (1e-4) on optimiser
@@ -90,6 +93,7 @@ lower accuracy in epoch 15 so overfit? maybe just start of oscillation?
 **Run:** (4) 2025-10-12_21-32-58_mbv3-baseline
 
 **Goal:** Improve accuracy further
+
 **Change vs prev:**
 Changed scheduler to OneCycleLR
 Tweaked random erasing (scale 0.08->0.12)
@@ -125,6 +129,7 @@ person recall: 0.76
 **Run:** (5) 2025-10-13_09-39-05_mbv3-baseline
 
 **Goal:** Attempt to reduce oscillation and improve person recall
+
 **Change vs prev:**
 OneCycleLR paramters: pct_start -> 0.05, div_factor -> 20.0
 
@@ -154,11 +159,10 @@ person recall: 0.77
 
 ---
 
----
-
 **Run:** (6) 2025-10-19_16-06-50_mbv3_small_vww96
 
 **Goal:** Change of code structure - confirm performance
+
 **Change vs prev:**
 Code structure
 and random erasing 0.12->0.08
@@ -193,7 +197,8 @@ person recall: 0.74
 
 **Run:** (7) runs/2025-10-19_17-37-39_mbv3_small_vww96
 
-**Goal:** Same as last - fixed error logging confusion matrix, and change random erasing back
+**Goal:** Same as last - fixed confusion matrix error, and change random erasing back to 0.12
+
 **Change vs prev:**
 random erasing back 0.08->0.12
 

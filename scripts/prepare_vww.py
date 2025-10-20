@@ -5,13 +5,13 @@ What it does (in one run):
 1) Downloads MS COCO (2014/2017) via helper scripts vendored under scripts/pyvww.
 2) Creates the official COCO maxitrain/minival split.
 3) Generates VWW (binary person/not-person) annotations.
-4) Exports images resized to 96x96 into:
-   data/vww96/{train,val}/{0,1}/*.jpg
+4) Exports images resized to {size}x{size} into:
+   data/vww{size}/{train,val}/{0,1}/*.jpg
    where 1 = person present, 0 = no person.
 
 Usage:
   pip install pyvww pycocotools pillow tqdm
-  python scripts/prepare_vww.py --year 2017
+  python scripts/prepare_vww.py --year 2017 --size 96
 """
 
 import argparse
@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 from typing import Dict, Tuple
 
-from PIL import Image
+from PIL import Image, ImageOps
 from tqdm import tqdm
 
 # Local copy of pyvww scripts
@@ -31,7 +31,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = REPO_ROOT / "data"
 DEFAULT_COCO_DIR = DATA_ROOT / "coco"
 DEFAULT_VWW_DIR = DATA_ROOT / "vww"
-DEFAULT_EXPORT_DIR = DATA_ROOT / "vww96"
+
+# IMAGENET1K_V2
+IMAGENET_MEAN = [0.485, 0.456, 0.406]
 
 
 def run(cmd: list[str]) -> None:
@@ -159,7 +161,9 @@ def export_split(
     year: str,
     out_root: Path,
     split_name: str,
-    size: Tuple[int, int] = (96, 96),
+    size: Tuple[int, int],
+    mode: str,
+    pad_rgb: Tuple[int, int, int] | None = None,
 ) -> None:
     """
     Export a resized image set (e.g., 96x96) for one split (train or val),
@@ -171,7 +175,12 @@ def export_split(
         year: "2014" or "2017".
         out_root: Root directory where resized images will be written.
         split_name: "train" or "val".
-        size: (width, height) to resize to; default (96,96) for VWW.
+        size: (width, height) to resize to.
+        mode: export policy:
+            - "center-crop": AR-preserving resize (short side -> target), then center crop
+            - "letterbox"  : AR-preserving resize (long  side -> target), then pad to square
+            - "resize"     : legacy direct resize to (w,h)
+        pad_rgb: RGB tuple for padding when mode="letterbox".
     """
     id_to_image, image_to_label = load_coco_like(json_path)
 
@@ -181,7 +190,7 @@ def export_split(
     split_out_0.mkdir(parents=True, exist_ok=True)
     split_out_1.mkdir(parents=True, exist_ok=True)
 
-    def resolve_path(file_name: str) -> Path | None:
+    def _resolve_path(file_name: str) -> Path | None:
         """
         Try to resolve an image path. COCO stores images under train{year}/ and val{year}/.
         Some file_name entries may already include subfolders.
@@ -197,6 +206,26 @@ def export_split(
 
     missing = 0
 
+    def _center_crop_after_resize(img: Image.Image, target: int) -> Image.Image:
+        # resize so short side == target, then center crop to target×target
+        w, h = img.size
+        scale = target / min(w, h)
+        nw, nh = max(1, int(round(w * scale))), max(1, int(round(h * scale)))
+        img = img.resize((nw, nh), resample=Image.LANCZOS)
+        left = (nw - target) // 2
+        top = (nh - target) // 2
+        return img.crop((left, top, left + target, top + target))
+ 
+    def _letterbox_to_square(img: Image.Image, target: int, rgb: Tuple[int, int, int]) -> Image.Image:
+        # resize so long side == target, then pad to target×target
+        w, h = img.size
+        scale = target / max(w, h)
+        nw, nh = max(1, int(round(w * scale))), max(1, int(round(h * scale)))
+        img = img.resize((nw, nh), resample=Image.LANCZOS)
+        pad_w, pad_h = target - nw, target - nh
+        padding = (pad_w // 2, pad_h // 2, pad_w - pad_w // 2, pad_h - pad_h // 2)
+        return ImageOps.expand(img, border=padding, fill=rgb)
+
     # Iterate images referenced by the annotation JSON.
     for img_id, img_meta in tqdm(id_to_image.items(), desc=f"Export {split_name}"):
         label = image_to_label.get(img_id)
@@ -205,7 +234,7 @@ def export_split(
             continue
 
         # Figure out where the original COCO image lives.
-        src = resolve_path(img_meta["file_name"])
+        src = _resolve_path(img_meta["file_name"])
         if src is None:
             missing += 1
             continue
@@ -219,10 +248,12 @@ def export_split(
             continue
 
         try:
-            # Open, convert to RGB (handles PNGs/CMYK), resize with high-quality filter, save JPEG.
-            Image.open(src).convert("RGB")\
-                .resize(size, Image.LANCZOS)\
-                .save(dst, format="JPEG", quality=95)
+            img = Image.open(src).convert("RGB")
+            if mode == "center-crop":
+                out = _center_crop_after_resize(img, size[0])
+            elif mode == "letterbox":
+                out = _letterbox_to_square(img, size[0], pad_rgb)
+            out.save(dst, format="JPEG", quality=95)
         except Exception:
             # Corrupt/unreadable files get skipped silently; training can tolerate a few misses.
             continue
@@ -236,14 +267,16 @@ def main() -> None:
     Parse CLI args, run the full pipeline, and print where the ready-to-train
     folders ended up.
     """
-    ap = argparse.ArgumentParser(description="End-to-end VWW prep with 96x96 export")
+    ap = argparse.ArgumentParser()
     ap.add_argument("--year", choices=["2014", "2017"], default="2017", help="COCO split to use")
     ap.add_argument("--threshold", type=float, default=0.005, help="Area ratio for foreground presence (e.g., 0.5%)")
+    ap.add_argument("--size", choices=[96, 224], type=int, required=True)
     args = ap.parse_args()
 
     coco_dir = DEFAULT_COCO_DIR
     vww_dir = DEFAULT_VWW_DIR
-    export_dir = DEFAULT_EXPORT_DIR
+    export_dir = DATA_ROOT / f"vww{str(args.size)}"
+    print(export_dir)
 
     # 1) Fetch COCO if needed
     ensure_coco(coco_dir, args.year)
@@ -258,8 +291,19 @@ def main() -> None:
     )
 
     # 4) Export resized images for both splits
-    export_split(vww_train, coco_dir, args.year, export_dir, "train", size=(96, 96))
-    export_split(vww_val, coco_dir, args.year, export_dir, "val", size=(96, 96))
+    
+    if args.size == 96:
+        mode = "letterbox"
+        pad_rgb = tuple(int(round(m * 255)) for m in IMAGENET_MEAN)
+        print(f"[info] using ImageNet mean for padding: {pad_rgb}")
+    else:
+        mode = "center-crop"
+        pad_rgb = None
+
+    export_split(vww_train, coco_dir, args.year, export_dir, "train", size=(args.size, args.size),
+                 mode=mode, pad_rgb=pad_rgb)
+    export_split(vww_val, coco_dir, args.year, export_dir, "val", size=(args.size, args.size),
+                 mode=mode, pad_rgb=pad_rgb)
 
     print("\nDone. Folders ready for training:")
     print(f"  {export_dir}/train/0  (no-person)")

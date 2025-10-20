@@ -14,16 +14,16 @@ data:
     std: [0.2653, 0.2618, 0.2768]
     aug:
         rand_hflip: 0.5
-        color_jitter: [0.2, 0.2, 0.2, 0] # [b, c, s, h]
-        random_erasing: [0.25, 0.02, 0.12, 0.3, 3.3] # [p, scale, scale, ratio, ratio]
+        color_jitter: [0.2, 0.2, 0.2, 0.0] # [b, c, s, h]
+        random_erasing: [0.25, 0.02, 0.12, 0.3, 3.3] # [p, scale-, scale+, ratio-, ratio+]
 
 model:
-    type: 'mobilenet_v3_small' # mobilenetv3_small | mobilenetv3_large
+    type: 'mobilenet_v3_small'
     pretrained: false
     # dropout: 0.0 ?
 
 train:
-    epochs: 1
+    epochs: 30
     label_smoothing: 0.05
     early_stop_patience: 8
     optimizer:
@@ -36,26 +36,3 @@ train:
         pct_start: 0.05
         div_factor: 20.0
         final_div_factor: 10000.0
-
-# Only used when stage=distill
-distill:
-    teacher:
-        ckpt: 'runs/teacher/best.pt' # or null to train teacher first
-        arch: 'mobilenetv3_large'
-        pretrained: true
-    alpha: 0.5 # CE weight
-    temperature: 4.0
-
-# Only used when stage=prune
-prune:
-    method: 'global_magnitude'
-    amount: 0.5 # overall sparsity
-    finetune_epochs: 5
-    finetune_lr: 0.0005
-
-# Only used when stage=quant
-quant:
-    mode: 'ptq' # ptq|qat
-    calibrate_batches: 50
-    qat_epochs: 10
-    qat_lr: 0.0005

@@ -269,38 +269,113 @@ Instability while training
 
 ---
 
-**Run:** (9)
+**Run:** (9) runs/2025-10-21_11-28-36_mbv3_small_vww96
 
-**Goal:** Address instability/oscillation, and recall
+**Goal:** revert some changes - just test sampler and grad clip. Goal is better recall with similar acc to run 8.
 
 **Change vs prev:**
-changed lr (and max_lr) from 0.001 to 0.0005 to reduce oscillation
-added gradient norm clipping to also improve osc
-added sampler to address class imbalance (recall problems)
-color jitter 0.2 -> 0.15
+lr/max_lr back to 0.001
+colour jitter back to 0.2
+set sampler class weight \* 0.5
 
 **Config:**
 96×96
 bs=256
 30 epochs
-lr=0.0005
+lr=0.001
 Optimiser: AdamW - weight_decay=1e-4
 Loss fcn: CrossEntropyLoss - label_smoothing=0.05
-scheduler: OneCycleLR - max_lr=0.0005, pct_start=0.05, div_factor=20.0, final_div_factor=1e4, anneal_strategy="cos"
+scheduler: OneCycleLR - max_lr=0.001, pct_start=0.05, div_factor=20.0, final_div_factor=1e4, anneal_strategy="cos"
 seed=42
 
 **Data:**
 Dataset mean/std normalization
 RandomHorizontalFlip
-ColorJitter(brightness=0.15, contrast=0.15, saturation=0.15, hue=0.0)
+ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.0)
 RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3))
 
 **Result:**
-val_acc= @ epoch
+val_acc= 0.7941 (epoch 21)
 
-no person recall:
-person recall:
+no person recall: 0.82
+person recall: 0.75
+
+recall went down. This is because i set sampler to 0.5 actually skewing the data.
 
 **Confusion highlights:**
+[[3498  761]
+ [ 953 2847]]
+
+---
+
+**Run:** (10) runs/2025-10-21_12-49-31_mbv3_small_vww96
+
+**Goal:** Improve recall with similar acc to run 8
+
+**Change vs prev:**
+sampler class weight -> \* 1
+rm clipping for now, though this shouldn't affect it.
+Only change over 8 is sampler
+
+**Config:**
+96×96
+bs=256
+30 epochs
+lr=0.001
+Optimiser: AdamW - weight_decay=1e-4
+Loss fcn: CrossEntropyLoss - label_smoothing=0.05
+scheduler: OneCycleLR - max_lr=0.001, pct_start=0.05, div_factor=20.0, final_div_factor=1e4, anneal_strategy="cos"
+seed=42
+
+**Data:**
+Dataset mean/std normalization
+RandomHorizontalFlip
+ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.0)
+RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3))
+
+**Result:**
+val_acc= 0.7977 (epoch 19)
+
+no person recall: 0.83
+person recall: 0.76
+
+**Confusion highlights:**
+[[3525  734]
+ [ 921 2879]]
+
+---
+
+**Run:** (11) runs/2025-10-21_13-52-14_mbv3_small_vww96
+
+**Goal:** Revert performance back to 8
+
+**Change vs prev:**
+rm sampler - should be back to same config as 8
+
+**Config:**
+96×96
+bs=256
+30 epochs
+lr=0.001
+Optimiser: AdamW - weight_decay=1e-4
+Loss fcn: CrossEntropyLoss - label_smoothing=0.05
+scheduler: OneCycleLR - max_lr=0.001, pct_start=0.05, div_factor=20.0, final_div_factor=1e4, anneal_strategy="cos"
+seed=42
+
+**Data:**
+Dataset mean/std normalization
+RandomHorizontalFlip
+ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.0)
+RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3))
+
+**Result:**
+val_acc= 0.8083 (epoch 19)
+
+no person recall: 0.84
+person recall: 0.76
+
+**Confusion highlights:**
+[[3558  701]
+ [ 907 2893]]
 
 ---

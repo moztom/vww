@@ -78,7 +78,7 @@ def build_context(config_path: Path):
         "autocast": autocast,
         "max_patience": config["train"]["early_stop_patience"],
         "epochs": config["train"]["epochs"],
-        "grad_clip_norm": config["train"]["grad_clip_norm"],
+        "grad_clip_norm": config["train"].get("grad_clip_norm", 0.0),
     }
 
     return context

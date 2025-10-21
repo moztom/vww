@@ -46,10 +46,11 @@ def build_dataloaders(
         "1": 1,
     }, f"class mapping is {train_ds.class_to_idx}"
 
+    """
     # Sampler to address slightly inbalanced batches
     targets = np.array(train_ds.targets)
     class_counts = np.bincount(targets)
-    class_weights = 1.0 / class_counts
+    class_weights = (1.0 / class_counts)
     sample_weights = class_weights[targets]
 
     sampler = WeightedRandomSampler(
@@ -57,11 +58,13 @@ def build_dataloaders(
         num_samples=len(sample_weights),
         replacement=True
     )
+    """
 
     tr_loader = DataLoader(
         train_ds,
         batch_size=batch_size,
-        sampler=sampler,
+        shuffle=True,
+        #sampler=sampler,
         num_workers=num_workers,
         pin_memory=torch.cuda.is_available(),
     )

@@ -42,6 +42,7 @@ def main():
             ctx["scheduler"],
             ctx["scaler"],
             ctx["autocast"],
+            ctx["grad_clip_norm"]
         )
 
         va_loss, va_acc, *_ = evaluate(ctx["model"], ctx["val_loader"], ctx["device"])

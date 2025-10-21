@@ -1,8 +1,9 @@
 from pathlib import Path
 from typing import List
+import numpy as np
 
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import datasets, transforms
 
 
@@ -45,10 +46,22 @@ def build_dataloaders(
         "1": 1,
     }, f"class mapping is {train_ds.class_to_idx}"
 
+    # Sampler to address slightly inbalanced batches
+    targets = np.array(train_ds.targets)
+    class_counts = np.bincount(targets)
+    class_weights = 1.0 / class_counts
+    sample_weights = class_weights[targets]
+
+    sampler = WeightedRandomSampler(
+        weights=torch.as_tensor(sample_weights, dtype=torch.float),
+        num_samples=len(sample_weights),
+        replacement=True
+    )
+
     tr_loader = DataLoader(
         train_ds,
         batch_size=batch_size,
-        shuffle=True,
+        sampler=sampler,
         num_workers=num_workers,
         pin_memory=torch.cuda.is_available(),
     )
@@ -68,7 +81,6 @@ def build_dataloaders(
     val_loader = DataLoader(
         val_ds,
         batch_size=batch_size,
-        shuffle=False,
         num_workers=num_workers,
         pin_memory=torch.cuda.is_available(),
     )

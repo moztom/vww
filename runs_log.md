@@ -229,3 +229,78 @@ person recall: 0.77
  [ 878 2922]]
 
 ---
+
+**Run:** (8) runs/2025-10-20_22-27-02_mbv3_small_vww96
+
+**Goal:** Test performance on more stable data
+
+**Change vs prev:**
+Made change to how vww dataset is generated - vww96 now keeps aspect ratio and uses padding.
+Changed to imagenet mean/std. I will use these values throughout the project for simplicity/stability.
+No changes otherwise
+
+**Config:**
+96×96
+bs=256
+30 epochs
+lr=1e-3
+Optimiser: AdamW - weight_decay=1e-4
+Loss fcn: CrossEntropyLoss - label_smoothing=0.05
+scheduler: OneCycleLR - max_lr=1e-3, pct_start=0.05, div_factor=20.0, final_div_factor=1e4, anneal_strategy="cos"
+seed=42
+
+**Data:**
+Dataset mean/std normalization
+RandomHorizontalFlip
+ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2)
+RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3))
+
+**Result:**
+val_acc=0.8083 @ epoch 19
+
+no person recall: 0.82
+person recall: 0.77
+
+Instability while training
+
+**Confusion highlights:**
+[[3489  770]
+ [ 868 2932]]
+
+---
+
+**Run:** (9)
+
+**Goal:** Address instability/oscillation, and recall
+
+**Change vs prev:**
+changed lr (and max_lr) from 0.001 to 0.0005 to reduce oscillation
+added gradient norm clipping to also improve osc
+added sampler to address class imbalance (recall problems)
+color jitter 0.2 -> 0.15
+
+**Config:**
+96×96
+bs=256
+30 epochs
+lr=0.0005
+Optimiser: AdamW - weight_decay=1e-4
+Loss fcn: CrossEntropyLoss - label_smoothing=0.05
+scheduler: OneCycleLR - max_lr=0.0005, pct_start=0.05, div_factor=20.0, final_div_factor=1e4, anneal_strategy="cos"
+seed=42
+
+**Data:**
+Dataset mean/std normalization
+RandomHorizontalFlip
+ColorJitter(brightness=0.15, contrast=0.15, saturation=0.15, hue=0.0)
+RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3))
+
+**Result:**
+val_acc= @ epoch
+
+no person recall:
+person recall:
+
+**Confusion highlights:**
+
+---

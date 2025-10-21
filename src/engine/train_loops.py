@@ -3,10 +3,11 @@ from contextlib import nullcontext
 
 import torch
 from torch.nn import CrossEntropyLoss
+from torch.nn.utils import clip_grad_norm_
 
 
 def train_one_epoch(
-    model, loader, device, optimizer, criterion, scheduler, scaler, autocast
+    model, loader, device, optimizer, criterion, scheduler, scaler, autocast, grad_clip_norm
 ):
     """Train the model for one epoch"""
 
@@ -33,11 +34,14 @@ def train_one_epoch(
         if scaler:
             # CUDA
             scaler.scale(loss).backward()  # backward pass with loss scaling
+            scaler.unscale_(optimizer)
+            clip_grad_norm_(model.parameters(), grad_clip_norm)
             scaler.step(optimizer)  # optimizer step
             scaler.update()  # update scaler for next iteration
         else:
             # MPS and CPU
             loss.backward()  # backward pass
+            clip_grad_norm_(model.parameters(), grad_clip_norm)
             optimizer.step()  # optimizer step
 
         if scheduler:

@@ -13,7 +13,7 @@ from src.data import build_dataloaders
 from src.models import build_model
 
 
-def build_context(config_path: Path):
+def build_context(config_path: Path, stage: str = None):
     """Build training context from config file"""
 
     # load config
@@ -79,7 +79,31 @@ def build_context(config_path: Path):
         "max_patience": config["train"]["early_stop_patience"],
         "epochs": config["train"]["epochs"],
         "grad_clip_norm": config["train"].get("grad_clip_norm", 0.0),
+        "save_full_checkpt": config["train"]["save_full_checkpt"],
     }
+
+    if stage == "kd":
+        teacher = build_model(config["kd"]["teacher"]["arch"], config["kd"]["teacher"]["pretrained"])
+        checkpt = torch.load(config["kd"]["teacher"]["checkpt"], map_location="cpu")
+        teacher.load_state_dict(checkpt["model"])
+        teacher.to(device)
+        teacher.eval()
+
+        for p in teacher.parameters():
+            p.requires_grad = False
+        
+        context.update({
+            "teacher": teacher,
+            "kd_alpha": float(config["kd"]["alpha"]),
+            "kd_temp": float(config["kd"]["temperature"]),
+        })
+
+    if stage == "prune":
+        pass
+
+    if stage == "quant":
+        pass
+
 
     return context
 

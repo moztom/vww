@@ -1,5 +1,5 @@
 meta:
-    name: 'mbv3_large_vww224'
+    name: 'teacher_mbv3l_vww244'
     seed: 42
     out_dir: 'runs'
     device: 'auto' # auto|cuda|mps|cpu
@@ -10,7 +10,6 @@ data:
     path: 'data/vww224'
     batch: 128
     num_workers: 4
-    # ImageNet normalisation values
     mean: [0.485, 0.456, 0.406]
     std: [0.229, 0.224, 0.225]
     aug:
@@ -27,6 +26,8 @@ train:
     epochs: 30
     label_smoothing: 0.05
     early_stop_patience: 5
+    grad_clip_norm: 0.0
+    save_full_checkpt: false
     optimizer:
         name: 'adamw'
         lr: 0.0005

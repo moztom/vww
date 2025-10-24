@@ -71,6 +71,31 @@ def log_epoch(writer, run_dir: Path, epoch: int, tr_loss, tr_acc, va_loss, va_ac
         }) + "\n")
 
 
+def save_checkpt(output_path, epoch, model, va_acc, save_full_checkpt, *, optimizer, scheduler, scaler, va_loss):
+    """ Save model checkpoint """
+
+    if save_full_checkpt:
+        to_save = {
+            "epoch": epoch,
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "scheduler": scheduler.state_dict(),
+            "scaler": scaler.state_dict() if scaler else None,
+            "metrics": {"va_acc": va_acc, "va_loss": va_loss},
+        }
+    else:
+        to_save = {
+            "epoch": epoch,
+            "model": model.state_dict(),
+            "va_acc": va_acc
+        }
+
+    torch.save(
+        to_save,
+        output_path,
+    )
+
+
 def _try_cmd(cmd):
     try:
         return subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode().strip()

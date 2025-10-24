@@ -6,7 +6,8 @@ import torch
 from sklearn.metrics import confusion_matrix, classification_report
 
 from src.engine.setup import build_context
-from src.engine.train_loops import train_one_epoch, evaluate
+from src.engine.kd import kd_train_one_epoch
+from src.engine.train_loops import evaluate
 from src.engine.utils import log_epoch, save_checkpt
 
 
@@ -18,7 +19,7 @@ def main():
     ap.add_argument("--debug", required=False, type=bool, default=False)
     args = ap.parse_args()
 
-    ctx = build_context(args.config_path)
+    ctx = build_context(args.config_path, stage="kd")
 
     if args.debug == True:
         print("Config load complete:")
@@ -33,15 +34,17 @@ def main():
     for epoch in range(1, ctx["epochs"] + 1):
         epoch_start = time.perf_counter()
 
-        tr_loss, tr_acc = train_one_epoch(
+        tr_loss, tr_acc = kd_train_one_epoch(
             ctx["model"],
+            ctx["teacher"],
             ctx["tr_loader"],
             ctx["device"],
             ctx["optimizer"],
-            ctx["criterion"],
             ctx["scheduler"],
             ctx["scaler"],
             ctx["autocast"],
+            ctx["kd_alpha"],
+            ctx["kd_temp"],
             ctx["grad_clip_norm"],
         )
 

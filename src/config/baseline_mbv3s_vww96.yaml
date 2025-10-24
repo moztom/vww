@@ -1,5 +1,5 @@
 meta:
-    name: 'mbv3_small_vww96'
+    name: 'baseline_mbv3s_vww96'
     seed: 42
     out_dir: 'runs'
     device: 'auto' # auto|cuda|mps|cpu
@@ -10,7 +10,6 @@ data:
     path: 'data/vww96'
     batch: 256
     num_workers: 4
-    # ImageNet normalisation values
     mean: [0.485, 0.456, 0.406]
     std: [0.229, 0.224, 0.225]
     aug:
@@ -27,7 +26,8 @@ train:
     epochs: 30
     label_smoothing: 0.05
     early_stop_patience: 5
-    grad_clip_norm: 1.0
+    grad_clip_norm: 2.0
+    save_full_checkpt: false
     optimizer:
         name: 'adamw'
         lr: 0.001 # This doesn't matter since the scheduler overrides it. It will be set to max_lr/div_factor on the first pass.

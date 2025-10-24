@@ -10,3 +10,4 @@ Pipfile
 Pipfile.lock
 .DS_Store
 Untracked/
+.vscode

@@ -15,7 +15,7 @@ data:
     aug:
         rand_hflip: 0.5
         color_jitter: [0.2, 0.2, 0.2, 0.0] # [b, c, s, h]
-        random_erasing: [0.25, 0.02, 0.12, 0.3, 3.3] # [p, scale-, scale+, ratio-, ratio+]
+        random_erasing: [0.0, 0.02, 0.12, 0.3, 3.3] # [p, scale-, scale+, ratio-, ratio+]
 
 model:
     type: 'mobilenet_v3_small' # mobilenet_v3_small | mobilenet_v3_large

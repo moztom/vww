@@ -34,13 +34,15 @@ def train_one_epoch(
         # Backward
         if scaler: # CUDA
             scaler.scale(loss).backward()  # backward pass with loss scaling
-            scaler.unscale_(optimizer)
-            clip_grad_norm_(model.parameters(), grad_clip_norm) # clip grad norms
+            if grad_clip_norm and grad_clip_norm > 0:
+                scaler.unscale_(optimizer)
+                clip_grad_norm_(model.parameters(), grad_clip_norm) # clip grad norms
             scaler.step(optimizer)  # optimizer step
             scaler.update()  # update scaler for next iteration
         else: # MPS and CPU
             loss.backward()  # backward pass
-            clip_grad_norm_(model.parameters(), grad_clip_norm) # clip grad norms
+            if grad_clip_norm and grad_clip_norm > 0:
+                clip_grad_norm_(model.parameters(), grad_clip_norm) # clip grad norms
             optimizer.step()  # optimizer step
 
         if scheduler:

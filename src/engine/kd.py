@@ -16,11 +16,11 @@ def kd_loss(student_logits, teacher_logits, targets, alpha, T, label_smoothing=0
 
     kd_loss = alpha * ce + (1 - alpha) * kl
 
-    return kd_loss
+    return kd_loss, ce, kl
 
 
 def kd_train_one_epoch(
-    model,
+    student,
     teacher,
     loader,
     device,
@@ -35,9 +35,10 @@ def kd_train_one_epoch(
 ):
     """ Train the student model for one epoch with knowledge distillation """
     
-    model.train()
+    student.train()
     teacher.eval()
-    total, correct, loss_sum = 0, 0, 0.0
+    total, correct = 0, 0
+    loss_sum, ce_sum, kl_sum = 0.0, 0.0, 0.0
     nonblock = torch.cuda.is_available()
 
     for imgs, labels in loader:
@@ -49,33 +50,48 @@ def kd_train_one_epoch(
         optimizer.zero_grad(set_to_none=True)
 
         with torch.no_grad():
-            teacher_logits = teacher(imgs)
+            t_in = F.interpolate(imgs, size=224, mode='bilinear', align_corners=False)
+            teacher_logits = teacher(t_in)
         
         # Forward
         with autocast:
-            student_logits = model(imgs)
-            loss = kd_loss(student_logits, teacher_logits, labels, alpha, T, label_smoothing)
+            student_logits = student(imgs)
+            loss, ce_loss, kl_loss = kd_loss(
+                student_logits,
+                teacher_logits,
+                labels,
+                alpha,
+                T,
+                label_smoothing,
+            )
 
         # Backward
         if scaler: # CUDA
             scaler.scale(loss).backward()
-            scaler.unscale_(optimizer)
-            clip_grad_norm_(model.parameters(), grad_clip_norm)
+            if grad_clip_norm and grad_clip_norm > 0:
+                scaler.unscale_(optimizer)
+                clip_grad_norm_(student.parameters(), grad_clip_norm)
             scaler.step(optimizer)
             scaler.update()
         else: # MPS and CPU
             loss.backward()
-            clip_grad_norm_(model.parameters(), grad_clip_norm)
+            if grad_clip_norm and grad_clip_norm > 0:
+                clip_grad_norm_(student.parameters(), grad_clip_norm)
             optimizer.step()
 
         if scheduler:
             scheduler.step()
         
-        loss_sum += loss.item() * labels.size(0)
+        batch_size = labels.size(0)
+        loss_sum += loss.item() * batch_size
+        ce_sum += ce_loss.item() * batch_size
+        kl_sum += kl_loss.item() * batch_size
         correct += (student_logits.argmax(1) == labels).sum().item()
-        total += labels.size(0)
+        total += batch_size
     
     tr_loss = loss_sum / total
     tr_acc = correct / total
-    
-    return tr_loss, tr_acc
+    tr_ce = ce_sum / total
+    tr_kl = kl_sum / total
+
+    return tr_loss, tr_acc, tr_ce, tr_kl

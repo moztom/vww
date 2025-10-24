@@ -28,8 +28,8 @@ def build_context(config_path: Path, stage: str = None):
     # data
     tr_loader, val_loader, class_weight_tensor = build_dataloaders(
         data_path=Path(config["data"]["path"]),
-        batch_size=config["data"].get("batch_size", 256),
-        num_workers=config["data"].get("num_workers", 4),
+        batch_size=config["data"]["batch"],
+        num_workers=config["data"]["num_workers"],
         mean=config["data"]["mean"],
         std=config["data"]["std"],
         rhf=config["data"]["aug"]["rand_hflip"],
@@ -90,7 +90,7 @@ def build_context(config_path: Path, stage: str = None):
         teacher.eval()
 
         for p in teacher.parameters():
-            p.requires_grad = False
+            p.requires_grad_(False)
         
         context.update({
             "teacher": teacher,
@@ -155,7 +155,7 @@ def _make_scheduler(config, optimizer, tr_loader):
             steps_per_epoch=len(tr_loader),
             pct_start=config["train"]["scheduler"]["pct_start"],
             div_factor=config["train"]["scheduler"]["div_factor"],
-            final_div_factor=config["train"]["scheduler"]["div_factor"],
+            final_div_factor=config["train"]["scheduler"]["final_div_factor"],
             anneal_strategy="cos",
         )
     else:

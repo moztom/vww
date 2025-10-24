@@ -453,3 +453,40 @@ A bit less stable, better performance.
  [ 878 2922]]
 
 ---
+
+**Run:** (14) runs/2025-10-23_19-51-08_baseline_mbv3s_vww96
+
+**Goal:** fix incorrect scheduler param. More stability, better generalisation?
+
+**Change vs prev:**
+Fixed error: final_div_factor was using div_factor value (20.0). Changed to 10000.0
+
+**Config:**
+96×96
+bs=256
+30 epochs
+lr=0.001
+Optimiser: AdamW - weight_decay=1e-4
+Loss fcn: CrossEntropyLoss - label_smoothing=0.05
+scheduler: OneCycleLR - max_lr=0.001, pct_start=0.05, div_factor=20.0, final_div_factor=1e4, anneal_strategy="cos"
+seed=42
+
+**Data:**
+Imagenet mean/std normalization
+RandomHorizontalFlip
+ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.0)
+RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3))
+
+**Result:**
+val_acc= 0.8095 (epoch 14)
+
+no person recall: 0.86
+person recall: 0.75
+
+A bit less stable, better performance.
+
+**Confusion highlights:**
+[[3652  607]
+ [ 937 2863]]
+
+---

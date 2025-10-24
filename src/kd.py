@@ -34,7 +34,7 @@ def main():
     for epoch in range(1, ctx["epochs"] + 1):
         epoch_start = time.perf_counter()
 
-        tr_loss, tr_acc = kd_train_one_epoch(
+        tr_loss, tr_acc, tr_ce, tr_kl = kd_train_one_epoch(
             ctx["model"],
             ctx["teacher"],
             ctx["tr_loader"],
@@ -65,8 +65,8 @@ def main():
         )
 
         print(
-            f"[{epoch}/{ctx["epochs"]}] "
-            f"train loss {tr_loss:.4f} acc {tr_acc:.4f} | "
+            f"[{epoch}/{ctx['epochs']}] "
+            f"train loss {tr_loss:.4f} (ce {tr_ce:.4f}, kl {tr_kl:.4f}) acc {tr_acc:.4f} | "
             f"val loss {va_loss:.4f} acc {va_acc:.4f} | "
             f"epoch time {epoch_elapsed:.1f}s | elapsed time {elapsed_total/60:.1f}m"
         )

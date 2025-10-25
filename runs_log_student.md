@@ -2,7 +2,7 @@
 
 **Goal:** First run
 
-## **Change vs prev:**
+**Change vs prev:**
 
 **Config:**
 alpha = 0.5
@@ -28,7 +28,7 @@ failed to converge - likely due to teacher being given same 96x96 inputs as stud
 
 **Goal:** Better performance
 
-## **Change vs prev:**
+**Change vs prev:**
 
 Fixed scheduler bug (final_div_factor 20 -> 10000)
 Upscaling teacher inputs to 224x224 resolution
@@ -58,7 +58,7 @@ More epochs with more patience?
 
 **Goal:** Better performance
 
-## **Change vs prev:**
+**Change vs prev:**
 
 New teacher
 More epochs/patience (50/8)
@@ -85,7 +85,7 @@ person recall: 0.76
 
 **Goal:** Better performance
 
-## **Change vs prev:**
+**Change vs prev:**
 
 Added alpha schedule
 
@@ -117,5 +117,59 @@ Your best accuracy occurs with moderate KD (alpha ≈ 0.5–0.6). Past that, ext
 
 [[3623  636]
  [1010 2790]]
+
+---
+
+(on PC)
+**Run:** (4) 2025-10-25_21-44-06_student_mbv3s_vww96
+
+**Goal:** Better performance
+
+**Change vs prev:**
+
+Constant alpha at 0.7
+
+**Config:**
+alpha = 0.7
+temp = 4.0
+
+teacher = '2025-10-24_21-17-59_teacher_mbv3l_vww244\model.pt'
+
+**Result:**
+val_acc= 0.8102 (epoch 17)
+no person recall: 0.85
+person recall: 0.76
+
+**Confusion highlights:**
+[[3601  658]
+ [ 922 2878]]
+
+---
+
+(on PC)
+**Run:** (4)
+
+**Goal:** slight boost to accuracy?
+
+**Change vs prev:**
+
+Same config, but with NO augs on teacher input data
+
+**Config:**
+alpha = 0.7
+temp = 4.0
+
+teacher = '2025-10-24_21-17-59_teacher_mbv3l_vww244\model.pt'
+
+**Result:**
+val_acc= 0.8080 (epoch 20)
+no person recall: 0.83
+person recall: 0.76
+
+No improvement
+
+**Confusion highlights:**
+[[3550  709]
+ [ 921 2879]]
 
 ---

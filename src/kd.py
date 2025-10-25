@@ -43,6 +43,11 @@ def main():
         Defaults:
           start=0.9, end=ctx["kd_alpha"], warmup=5, decay_end=ctx["epochs"].
         """
+
+        # Don't change alpha if constant flag set
+        if ctx["kd_alpha_constant"]:
+            return float(ctx["kd_alpha"])
+        
         total_epochs = ctx["epochs"]
         start = ctx.get("kd_alpha_start", None)
         end = ctx.get("kd_alpha_end", None)
@@ -138,7 +143,7 @@ def main():
         else:
             patience += 1
             if patience >= ctx["max_patience"]:
-                print(f"No improvement in {ctx["max_patience"]} epochs, stopping early")
+                print(f"No improvement in {ctx['max_patience']} epochs, stopping early")
                 break
 
     total_elapsed = time.perf_counter() - overall_start

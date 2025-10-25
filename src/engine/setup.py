@@ -104,6 +104,7 @@ def build_context(config_path: Path, stage: str = None):
             "kd_alpha_end": kd_cfg.get("alpha_end", None),
             "kd_alpha_warmup_epochs": kd_cfg.get("alpha_warmup_epochs", None),
             "kd_alpha_decay_end_epoch": kd_cfg.get("alpha_decay_end_epoch", None),
+            "kd_alpha_constant": kd_cfg.get("alpha_constant", None),
         })
 
     if stage == "prune":

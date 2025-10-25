@@ -41,8 +41,9 @@ train:
 
 kd:
     teacher:
-        checkpt: 'runs/2025-10-24_21-17-59_teacher_mbv3l_vww244/model.pt'
+        checkpt: 'saved_runs\2025-10-24_21-17-59_teacher_mbv3l_vww244\model.pt'
         arch: 'mobilenet_v3_large'
         pretrained: true
-    alpha: 0.3
+    alpha: 0.7
+    alpha_constant: true
     temperature: 4.0

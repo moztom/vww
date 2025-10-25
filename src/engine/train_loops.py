@@ -2,6 +2,7 @@ import numpy as np
 from contextlib import nullcontext
 
 import torch
+import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 from torch.nn.utils import clip_grad_norm_
 
@@ -59,7 +60,7 @@ def train_one_epoch(
 
 
 @torch.no_grad()
-def evaluate(model, loader, device, metrics=False):
+def evaluate(model, loader, device, metrics=False, teacher=False):
     """Evaluate the model on the validation set"""
 
     model.eval()
@@ -74,6 +75,9 @@ def evaluate(model, loader, device, metrics=False):
         imgs, labels = imgs.to(device, non_blocking=nonblock), labels.to(
             device, non_blocking=nonblock
         )
+
+        if teacher:
+            imgs = F.interpolate(imgs, size=224, mode='bilinear', align_corners=False)
 
         logits = model(imgs)  # forward pass
         loss_sum += ce(logits, labels).item() * labels.size(0)  # sum up batch loss

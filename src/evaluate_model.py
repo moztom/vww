@@ -15,6 +15,7 @@ def main():
     ap.add_argument("--model_path", required=True, type=Path, help="Path to model (.pt)")
     ap.add_argument("--data_path", required=True, type=Path, help="Path to data (e.g. data/vww96)")
     ap.add_argument("--batch_size", required=True, type=int, help="Batch size (128 or 256)")
+    ap.add_argument("--teacher", required=False, type=bool, help="Evaluating teacher mode?")
     args = ap.parse_args()
 
     model = build_model(args.model_type)
@@ -24,7 +25,7 @@ def main():
     checkpt = torch.load(args.model_path, map_location="cpu")
     state = checkpt["model"]
 
-    print(checkpt["acc"])
+    print(checkpt["va_acc"])
     print(checkpt["epoch"])
 
     model.load_state_dict(state, strict=True)
@@ -32,7 +33,7 @@ def main():
 
     val_loader = build_dataloaders(args.data_path, args.batch_size, eval_only=True)
 
-    avg_loss, acc, preds, gts = evaluate(model, val_loader, device, metrics=True)
+    avg_loss, acc, preds, gts = evaluate(model, val_loader, device, metrics=True, teacher=True)
 
     labels = [0, 1]
     target_names = ["no_person(0)", "person(1)"]

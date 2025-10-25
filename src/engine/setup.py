@@ -92,10 +92,18 @@ def build_context(config_path: Path, stage: str = None):
         for p in teacher.parameters():
             p.requires_grad_(False)
         
+        # Optional KD alpha scheduling parameters
+        kd_cfg = config.get("kd", {})
         context.update({
             "teacher": teacher,
-            "kd_alpha": float(config["kd"]["alpha"]),
-            "kd_temp": float(config["kd"]["temperature"]),
+            "kd_alpha": float(kd_cfg.get("alpha", 0.5)),
+            "kd_temp": float(kd_cfg.get("temperature", 4.0)),
+            # Optional scheduling controls (all optional)
+            # If absent, kd.py will fall back to sensible defaults.
+            "kd_alpha_start": kd_cfg.get("alpha_start", None),
+            "kd_alpha_end": kd_cfg.get("alpha_end", None),
+            "kd_alpha_warmup_epochs": kd_cfg.get("alpha_warmup_epochs", None),
+            "kd_alpha_decay_end_epoch": kd_cfg.get("alpha_decay_end_epoch", None),
         })
 
     if stage == "prune":

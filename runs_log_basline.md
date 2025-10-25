@@ -483,7 +483,7 @@ val_acc= 0.8095 (epoch 14)
 no person recall: 0.86
 person recall: 0.75
 
-A bit less stable, better performance.
+Much more stable, better performance (apart from person recall)
 
 **Confusion highlights:**
 [[3652  607]

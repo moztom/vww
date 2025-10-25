@@ -54,21 +54,30 @@ def init_logging(config: dict, device: str):
     return run_dir, writer
 
 
-def log_epoch(writer, run_dir: Path, epoch: int, tr_loss, tr_acc, va_loss, va_acc, lr=None):
+def log_epoch(writer, run_dir: Path, epoch: int, tr_loss, tr_acc, va_loss, va_acc, lr=None, ce=None, kl=None, alpha=None):
     """ Log epoch metrics to TensorBoard and JSONL file """
 
-    writer.add_scalar("loss/train", float(tr_loss), epoch)
-    writer.add_scalar("acc/train", float(tr_acc), epoch)
-    writer.add_scalar("loss/val", float(va_loss), epoch)
-    writer.add_scalar("acc/val", float(va_acc), epoch)
-    if lr is not None: 
-        writer.add_scalar("lr", float(lr), epoch)
+    writer.add_scalar("train loss", float(tr_loss), epoch)
+    writer.add_scalar("ce_loss", float(ce), epoch) if ce is not None else None
+    writer.add_scalar("kl_loss", float(kl), epoch) if kl is not None else None
+    writer.add_scalar("train acc", float(tr_acc), epoch)
+    writer.add_scalar("val loss", float(va_loss), epoch)
+    writer.add_scalar("val acc", float(va_acc), epoch)
+    writer.add_scalar("lr", float(lr), epoch) if lr is not None else None
 
-    with open(run_dir / "metrics.jsonl", "a") as file:
-        file.write(json.dumps({
-            "epoch": epoch, "train_loss": float(tr_loss), "train_acc": float(tr_acc),
-            "val_loss": float(va_loss), "val_acc": float(va_acc), "lr": None if lr is None else float(lr)
-        }) + "\n")
+    if ce and kl and alpha:
+        with open(run_dir / "metrics.jsonl", "a") as file:
+            file.write(json.dumps({
+                "epoch": epoch, "alpha": float(alpha), "train_loss": f"{float(tr_loss)} (ce {float(ce)}, kl {float(kl)})",
+                "train_acc": float(tr_acc), "val_loss": float(va_loss),
+                "val_acc": float(va_acc), "lr": float(lr) if lr is not None else None
+            }) + "\n")
+    else:
+        with open(run_dir / "metrics.jsonl", "a") as file:
+            file.write(json.dumps({
+                "epoch": epoch, "train_loss": float(tr_loss), "train_acc": float(tr_acc),
+                "val_loss": float(va_loss), "val_acc": float(va_acc), "lr": float(lr) if lr else None
+            }) + "\n")
 
 
 def save_checkpt(output_path, epoch, model, va_acc, save_full_checkpt, *, optimizer, scheduler, scaler, va_loss):

@@ -23,9 +23,9 @@ model:
     # dropout: 0.0 ?
 
 train:
-    epochs: 30
+    epochs: 50
     label_smoothing: 0.05
-    early_stop_patience: 5
+    early_stop_patience: 8
     grad_clip_norm: 2.0
     save_full_checkpt: true
     optimizer:
@@ -41,8 +41,8 @@ train:
 
 kd:
     teacher:
-        checkpt: 'runs/2025-10-21_15-39-10_mbv3_large_vww224/model.pt'
+        checkpt: 'runs/2025-10-24_21-17-59_teacher_mbv3l_vww244/model.pt'
         arch: 'mobilenet_v3_large'
         pretrained: true
-    alpha: 0.5
+    alpha: 0.3
     temperature: 4.0

@@ -31,8 +31,51 @@ def main():
     patience = 0
     overall_start = time.perf_counter()
 
+    def _compute_alpha(epoch: int) -> float:
+        """Epoch-wise KD alpha schedule: CE-heavy warmup then linear to target.
+
+        Optional context keys (if present in config):
+          - kd_alpha_start
+          - kd_alpha_end
+          - kd_alpha_warmup_epochs
+          - kd_alpha_decay_end_epoch
+
+        Defaults:
+          start=0.9, end=ctx["kd_alpha"], warmup=5, decay_end=ctx["epochs"].
+        """
+        total_epochs = ctx["epochs"]
+        start = ctx.get("kd_alpha_start", None)
+        end = ctx.get("kd_alpha_end", None)
+        if start is None:
+            start = 0.9
+        if end is None:
+            end = ctx["kd_alpha"]
+        warmup = ctx.get("kd_alpha_warmup_epochs", None)
+        if warmup is None:
+            warmup = 5
+        decay_end = ctx.get("kd_alpha_decay_end_epoch", None)
+        if decay_end is None:
+            decay_end = total_epochs
+
+        # Clamp and cast
+        warmup = max(0, int(warmup))
+        decay_end = max(warmup + 1, int(decay_end))
+        epoch = int(epoch)
+
+        if warmup > 0 and epoch <= warmup:
+            return float(start)
+
+        if epoch >= decay_end:
+            return float(end)
+
+        # Linear decay from start -> end between warmup+1 and decay_end
+        span = max(1, decay_end - warmup)
+        t = (epoch - warmup) / span
+        return float(start + t * (end - start))
+
     for epoch in range(1, ctx["epochs"] + 1):
         epoch_start = time.perf_counter()
+        epoch_alpha = _compute_alpha(epoch)
 
         tr_loss, tr_acc, tr_ce, tr_kl = kd_train_one_epoch(
             ctx["model"],
@@ -43,7 +86,7 @@ def main():
             ctx["scheduler"],
             ctx["scaler"],
             ctx["autocast"],
-            ctx["kd_alpha"],
+            epoch_alpha,
             ctx["kd_temp"],
             ctx["grad_clip_norm"],
         )
@@ -62,10 +105,14 @@ def main():
             va_loss,
             va_acc,
             ctx["optimizer"].param_groups[0]["lr"],
+            ce=tr_ce,
+            kl=tr_kl,
+            alpha=epoch_alpha,
         )
 
         print(
             f"[{epoch}/{ctx['epochs']}] "
+            f"alpha {epoch_alpha:.3f} | "
             f"train loss {tr_loss:.4f} (ce {tr_ce:.4f}, kl {tr_kl:.4f}) acc {tr_acc:.4f} | "
             f"val loss {va_loss:.4f} acc {va_acc:.4f} | "
             f"epoch time {epoch_elapsed:.1f}s | elapsed time {elapsed_total/60:.1f}m"

@@ -25,7 +25,7 @@ def init_logging(config: dict, device: str):
     # Check runs directory exists
     (REPO_ROOT / "runs").mkdir(exist_ok=True)
 
-    run_id = time.strftime("%Y-%m-%d_%H-%M-%S") + (f"_{config["meta"]["name"]}")
+    run_id = time.strftime("%Y-%m-%d_%H-%M-%S") + (f"_{config['meta']['name']}")
     run_dir = Path("runs") / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
 

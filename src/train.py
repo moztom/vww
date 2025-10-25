@@ -62,7 +62,7 @@ def main():
         )
 
         print(
-            f"[{epoch}/{ctx["epochs"]}] "
+            f"[{epoch}/{ctx['epochs']}] "
             f"train loss {tr_loss:.4f} acc {tr_acc:.4f} | "
             f"val loss {va_loss:.4f} acc {va_acc:.4f} | "
             f"epoch time {epoch_elapsed:.1f}s | elapsed time {elapsed_total/60:.1f}m"
@@ -88,7 +88,7 @@ def main():
         else:
             patience += 1
             if patience >= ctx["max_patience"]:
-                print(f"No improvement in {ctx["max_patience"]} epochs, stopping early")
+                print(f"No improvement in {ctx['max_patience']} epochs, stopping early")
                 break
 
     total_elapsed = time.perf_counter() - overall_start

@@ -454,7 +454,7 @@ A bit less stable, better performance.
 
 ---
 
-**Run:** (14) runs/2025-10-23_19-51-08_baseline_mbv3s_vww96
+**Run:** (14) runs/2025-10-24_19-51-08_baseline_mbv3s_vww96
 
 **Goal:** fix incorrect scheduler param. More stability, better generalisation?
 

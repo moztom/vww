@@ -81,7 +81,7 @@ person recall: 0.76
 
 ---
 
-**Run:** (4)
+**Run:** (4) 2025-10-25_17-46-08_student_mbv3s_vww96
 
 **Goal:** Better performance
 
@@ -96,11 +96,26 @@ temp = 4.0
 teacher = 'runs/2025-10-24_21-17-59_teacher_mbv3l_vww244/model.pt'
 
 **Result:**
-val_acc=
+val_acc= 0.8049 (epoch 20)
 
-no person recall:
-person recall:
+no person recall: 0.85
+person recall: 0.73
+
+No improvement
+
+Observations:
+Best val acc peaks at 0.8049 around epoch 20 when alpha ≈ 0.54, then steadily erodes as alpha drops below ~0.5 (teacher weight rises).
+CE and KL both fall as expected; by the end KD dominates (alpha=0.3 → 70% KL), yet val does not improve.
+LR schedule looks correct (ends near zero), so late-epoch drift isn’t from an LR floor.
+Confusion matrix shows recall on “person(1)” is the weak spot (FN=1010), similar to your earlier runs.
+
+Interpretation:
+Heavier KD late hurts generalization here. Given the teacher is 0.88 on the student pipeline (vs 0.94 native), pushing the student to match its softened logits too strongly likely pulls it away from the hard-label optimum at 96.
+Your best accuracy occurs with moderate KD (alpha ≈ 0.5–0.6). Past that, extra teacher weight doesn’t buy gains.
 
 **Confusion highlights:**
+
+[[3623  636]
+ [1010 2790]]
 
 ---

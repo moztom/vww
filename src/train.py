@@ -8,6 +8,8 @@ from sklearn.metrics import confusion_matrix, classification_report
 from src.engine.setup import build_context
 from src.engine.train_loops import train_one_epoch, evaluate
 from src.engine.utils import log_epoch, save_checkpt
+from src.engine.ema import ModelEMA
+from src.engine.finetune_utils import set_backbone_trainable, recalibrate_batch_norm
 
 
 def main():
@@ -29,6 +31,21 @@ def main():
     output_path = ctx["run_dir"] / "model.pt"
     patience = 0
     overall_start = time.perf_counter()
+    ema = None
+    if ctx.get("ema_decay"):
+        ema = ModelEMA(ctx["model"], ctx["ema_decay"])
+        ema.to(ctx["device"])
+
+    freeze_epochs = ctx.get("freeze_backbone_epochs", 0) or 0
+    backbone_frozen = False
+    if freeze_epochs > 0:
+        set_backbone_trainable(ctx["model"], False)
+        backbone_frozen = True
+        print(f"Freezing backbone for first {freeze_epochs} epochs")
+
+    bn_recal_epoch = ctx.get("bn_recalibrate_epoch")
+    bn_recal_batches = ctx.get("bn_recalibrate_max_batches")
+    bn_recal_done = False
 
     for epoch in range(1, ctx["epochs"] + 1):
         epoch_start = time.perf_counter()
@@ -43,9 +60,20 @@ def main():
             ctx["scaler"],
             ctx["autocast"],
             ctx["grad_clip_norm"],
+            ema=ema,
         )
 
-        va_loss, va_acc, *_ = evaluate(ctx["model"], ctx["val_loader"], ctx["device"])
+        if bn_recal_epoch and (not bn_recal_done) and epoch == bn_recal_epoch:
+            print("Recalibrating BatchNorm running statistics...")
+            recalibrate_batch_norm(
+                ctx["model"], ctx["tr_loader"], ctx["device"], bn_recal_batches
+            )
+            if ema:
+                ema.update(ctx["model"])
+            bn_recal_done = True
+
+        model_for_eval = ema.ema_model if ema else ctx["model"]
+        va_loss, va_acc, *_ = evaluate(model_for_eval, ctx["val_loader"], ctx["device"])
 
         epoch_elapsed = time.perf_counter() - epoch_start
         elapsed_total = time.perf_counter() - overall_start
@@ -76,7 +104,7 @@ def main():
             save_checkpt(
                 output_path,
                 epoch,
-                ctx["model"],
+                model_for_eval,
                 va_acc,
                 ctx["save_full_checkpt"],
                 optimizer=ctx["optimizer"],
@@ -91,11 +119,17 @@ def main():
                 print(f"No improvement in {ctx['max_patience']} epochs, stopping early")
                 break
 
+        if backbone_frozen and epoch >= freeze_epochs:
+            set_backbone_trainable(ctx["model"], True)
+            backbone_frozen = False
+            print("Backbone unfrozen")
+
     total_elapsed = time.perf_counter() - overall_start
 
     # Final metrics -----
+    final_model = ema.ema_model if ema else ctx["model"]
     va_loss, va_acc, preds, gts = evaluate(
-        ctx["model"], ctx["val_loader"], ctx["device"], metrics=True
+        final_model, ctx["val_loader"], ctx["device"], metrics=True
     )
     print("\nVALIDATION SUMMARY")
     print(

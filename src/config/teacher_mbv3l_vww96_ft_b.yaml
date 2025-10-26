@@ -1,0 +1,44 @@
+meta:
+    name: 'teacher_mbv3l_vww96_ft_b'
+    seed: 42
+    out_dir: 'runs'
+    device: 'auto'
+    amp: true
+
+data:
+    size: 96
+    path: 'data/vww96'
+    batch: 256
+    num_workers: 4
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+    aug:
+        rand_hflip: 0.5
+        color_jitter: [0.15, 0.15, 0.15, 0.0]
+        random_erasing: [0.0, 0.02, 0.12, 0.3, 3.3]
+
+model:
+    type: 'mobilenet_v3_large'
+    pretrained: true
+
+train:
+    epochs: 8
+    label_smoothing: 0.0
+    early_stop_patience: 3
+    grad_clip_norm: 0.0
+    save_full_checkpt: true
+    init_checkpoint: 'runs/2025-10-24_21-17-59_teacher_mbv3l_vww244/model.pt'
+    freeze_backbone_epochs: 0
+    ema_decay:
+    bn_recalibrate_epoch: 5
+    bn_recalibrate_max_batches: 300
+    optimizer:
+        name: 'adamw'
+        lr: 0.00015
+        weight_decay: 0.0002
+    scheduler:
+        name: 'onecycle'
+        max_lr: 0.00015
+        pct_start: 0.2
+        div_factor: 10.0
+        final_div_factor: 20000.0

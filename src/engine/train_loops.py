@@ -8,7 +8,16 @@ from torch.nn.utils import clip_grad_norm_
 
 
 def train_one_epoch(
-    model, loader, device, optimizer, criterion, scheduler, scaler, autocast, grad_clip_norm
+    model,
+    loader,
+    device,
+    optimizer,
+    criterion,
+    scheduler,
+    scaler,
+    autocast,
+    grad_clip_norm,
+    ema=None,
 ):
     """Train the model for one epoch"""
 
@@ -48,6 +57,9 @@ def train_one_epoch(
 
         if scheduler:
             scheduler.step()
+
+        if ema:
+            ema.update(model)
 
         loss_sum += loss.item() * labels.size(0)  # sum up batch loss
         correct += (logits.argmax(1) == labels).sum().item()  # count correct

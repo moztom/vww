@@ -39,10 +39,13 @@ def main():
           - kd_alpha_end
           - kd_alpha_warmup_epochs
           - kd_alpha_decay_end_epoch
+          - kd_alpha_constant
 
         Defaults:
           start=0.9, end=ctx["kd_alpha"], warmup=5, decay_end=ctx["epochs"].
         """
+        if ctx.get("kd_alpha_constant"):
+            return float(ctx["kd_alpha"])
 
         # Don't change alpha if constant flag set
         if ctx["kd_alpha_constant"]:
@@ -82,7 +85,7 @@ def main():
         epoch_start = time.perf_counter()
         epoch_alpha = _compute_alpha(epoch)
 
-        tr_loss, tr_acc, tr_ce, tr_kl = kd_train_one_epoch(
+        tr_loss, tr_acc, tr_ce, tr_kl, tr_margin = kd_train_one_epoch(
             ctx["model"],
             ctx["teacher"],
             ctx["tr_loader"],
@@ -94,6 +97,10 @@ def main():
             epoch_alpha,
             ctx["kd_temp"],
             ctx["grad_clip_norm"],
+            label_smoothing=ctx.get("kd_label_smoothing", 0.0),
+            teacher_input_size=ctx.get("kd_teacher_input_size"),
+            confidence_gamma=ctx.get("kd_confidence_gamma"),
+            margin_weight=ctx.get("kd_margin_weight", 0.0),
         )
 
         va_loss, va_acc, *_ = evaluate(ctx["model"], ctx["val_loader"], ctx["device"])
@@ -115,10 +122,11 @@ def main():
             alpha=epoch_alpha,
         )
 
+        margin_str = f", margin {tr_margin:.4f}" if tr_margin > 0 else ""
         print(
             f"[{epoch}/{ctx['epochs']}] "
             f"alpha {epoch_alpha:.3f} | "
-            f"train loss {tr_loss:.4f} (ce {tr_ce:.4f}, kl {tr_kl:.4f}) acc {tr_acc:.4f} | "
+            f"train loss {tr_loss:.4f} (ce {tr_ce:.4f}, kl {tr_kl:.4f}{margin_str}) acc {tr_acc:.4f} | "
             f"val loss {va_loss:.4f} acc {va_acc:.4f} | "
             f"epoch time {epoch_elapsed:.1f}s | elapsed time {elapsed_total/60:.1f}m"
         )

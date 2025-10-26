@@ -1,12 +1,12 @@
 meta:
-    name: 'student_mbv3s_vww96'
+    name: 'student_mbv3s_vww96_kd_a'
     seed: 42
     out_dir: 'runs'
-    device: 'auto' # auto|cuda|mps|cpu
+    device: 'auto'
     amp: true
 
 data:
-    size: 96 # 96 or 224
+    size: 96
     path: 'data/vww96'
     batch: 256
     num_workers: 4
@@ -14,17 +14,16 @@ data:
     std: [0.229, 0.224, 0.225]
     aug:
         rand_hflip: 0.5
-        color_jitter: [0.2, 0.2, 0.2, 0.0] # [b, c, s, h]
-        random_erasing: [0.0, 0.02, 0.12, 0.3, 3.3] # [p, scale-, scale+, ratio-, ratio+]
+        color_jitter: [0.2, 0.2, 0.2, 0.0]
+        random_erasing: [0.0, 0.02, 0.12, 0.3, 3.3]
 
 model:
-    type: 'mobilenet_v3_small' # mobilenet_v3_small | mobilenet_v3_large
+    type: 'mobilenet_v3_small'
     pretrained: false
-    # dropout: 0.0 ?
 
 train:
     epochs: 30
-    label_smoothing: 0.05
+    label_smoothing: 0.0
     early_stop_patience: 15
     grad_clip_norm: 2.0
     save_full_checkpt: true
@@ -41,13 +40,13 @@ train:
 
 kd:
     teacher:
-        checkpt: 'saved_runs\2025-10-24_21-17-59_teacher_mbv3l_vww244\model.pt'
+        checkpt: 'runs\\2025-10-26_17-53-08_teacher_mbv3l_vww96\\model.pt'
         arch: 'mobilenet_v3_large'
         pretrained: true
-    alpha: 0.7
+    alpha: 0.6
     alpha_constant: true
-    temperature: 5.0
-    teacher_input_size: 224
+    temperature: 2.0
+    teacher_input_size: 96
     label_smoothing: 0.0
     confidence_gamma:
     margin_weight: 0.0

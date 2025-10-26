@@ -120,6 +120,10 @@ def build_context(config_path: Path, stage: str = None):
             "kd_alpha_warmup_epochs": kd_cfg.get("alpha_warmup_epochs", None),
             "kd_alpha_decay_end_epoch": kd_cfg.get("alpha_decay_end_epoch", None),
             "kd_alpha_constant": kd_cfg.get("alpha_constant", None),
+            "kd_teacher_input_size": kd_cfg.get("teacher_input_size"),
+            "kd_confidence_gamma": kd_cfg.get("confidence_gamma"),
+            "kd_margin_weight": kd_cfg.get("margin_weight", 0.0),
+            "kd_label_smoothing": kd_cfg.get("label_smoothing", 0.0),
         })
 
     if stage == "prune":

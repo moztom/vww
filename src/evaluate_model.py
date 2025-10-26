@@ -33,7 +33,7 @@ def main():
 
     val_loader = build_dataloaders(args.data_path, args.batch_size, eval_only=True)
 
-    avg_loss, acc, preds, gts = evaluate(model, val_loader, device, metrics=True, teacher=True)
+    avg_loss, acc, preds, gts = evaluate(model, val_loader, device, metrics=True, teacher=args.teacher)
 
     labels = [0, 1]
     target_names = ["no_person(0)", "person(1)"]

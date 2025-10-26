@@ -90,7 +90,8 @@ def save_checkpt(output_path, epoch, model, va_acc, save_full_checkpt, *, optimi
             "optimizer": optimizer.state_dict(),
             "scheduler": scheduler.state_dict(),
             "scaler": scaler.state_dict() if scaler else None,
-            "metrics": {"va_acc": va_acc, "va_loss": va_loss},
+            "va_acc": va_acc,
+            "va_loss": va_loss,
         }
     else:
         to_save = {

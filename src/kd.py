@@ -14,7 +14,7 @@ from src.engine.utils import log_epoch, save_checkpt
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument(
-        "--config_path", required=True, type=Path, help="Path to config file (.yaml)"
+        "--config_path", required=True, type=Path, help="Path to config file e.g. src\config\student_mbv3s_vww96.yaml"
     )
     ap.add_argument("--debug", required=False, type=bool, default=False)
     args = ap.parse_args()

@@ -82,17 +82,10 @@ def main():
         epoch_start = time.perf_counter()
         epoch_alpha = _compute_alpha(epoch)
 
-        # Keep student/teacher loaders in sync by epoch
-        if hasattr(ctx["tr_loader"].sampler, "set_epoch"):
-            ctx["tr_loader"].sampler.set_epoch(epoch)
-        if hasattr(ctx["teacher_tr_loader"].sampler, "set_epoch"):
-            ctx["teacher_tr_loader"].sampler.set_epoch(epoch)
-
         tr_loss, tr_acc, tr_ce, tr_kl = kd_train_one_epoch(
             ctx["model"],
             ctx["teacher"],
             ctx["tr_loader"],
-            ctx["teacher_tr_loader"],
             ctx["device"],
             ctx["optimizer"],
             ctx["scheduler"],

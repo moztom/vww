@@ -4,7 +4,6 @@ import numpy as np
 
 import torch
 from torch.utils.data import DataLoader, WeightedRandomSampler
-from torch.utils.data.distributed import DistributedSampler
 from torchvision import datasets, transforms
 
 
@@ -97,87 +96,3 @@ def build_dataloaders(
     class_weight_tensor = None  # data is near balanced, so don’t weight
 
     return tr_loader, val_loader, class_weight_tensor
-
-
-def build_kd_dataloaders(
-    data_path: Path,
-    batch_size: int,
-    num_workers: int = 4,
-    mean: List[int] = [0.485, 0.456, 0.406],
-    std: List[int] = [0.229, 0.224, 0.225],
-    rhf: float = 0.5,
-    cj: List[float] = [0.2, 0.2, 0.2, 0.0],
-    re: List[float] = [0.25, 0.02, 0.12, 0.3, 3.3],
-):
-    """Create student/teacher train DataLoaders with identical ordering + val loader.
-
-    - Student uses augmented transforms (train_tf).
-    - Teacher uses non-augmented transforms (val_tf).
-    - Both loaders share the same random ordering per epoch via DistributedSampler.
-      Call sampler.set_epoch(epoch) each epoch to reshuffle consistently.
-    """
-
-    # Non-augmented (reuse validation transforms) for teacher
-    val_tf = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std),
-        ]
-    )
-
-    # Augmented transforms for student
-    train_tf = transforms.Compose(
-        [
-            transforms.RandomHorizontalFlip(p=rhf),
-            transforms.ColorJitter(brightness=cj[0], contrast=cj[1], saturation=cj[2], hue=cj[3]),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std),
-            transforms.RandomErasing(p=re[0], scale=(re[1], re[2]), ratio=(re[3], re[4])),
-        ]
-    )
-
-    # Datasets for training
-    student_train_ds = datasets.ImageFolder(data_path / "train", transform=train_tf)
-    teacher_train_ds = datasets.ImageFolder(data_path / "train", transform=val_tf)
-
-    # Confirm expected mapping: folder "0" -> class 0, "1" -> class 1
-    assert student_train_ds.class_to_idx == {"0": 0, "1": 1}, f"class mapping is {student_train_ds.class_to_idx}"
-    assert teacher_train_ds.class_to_idx == {"0": 0, "1": 1}, f"class mapping is {teacher_train_ds.class_to_idx}"
-    assert len(student_train_ds) == len(teacher_train_ds), "Student/teacher train datasets must be the same length"
-
-    # Shared-permutation approach: two DistributedSamplers with identical config
-    # Ensure to call set_epoch(epoch) on BOTH each epoch to keep them in sync.
-    student_sampler = DistributedSampler(student_train_ds, num_replicas=1, rank=0, shuffle=True, drop_last=False)
-    teacher_sampler = DistributedSampler(teacher_train_ds, num_replicas=1, rank=0, shuffle=True, drop_last=False)
-
-    tr_loader_student = DataLoader(
-        student_train_ds,
-        batch_size=batch_size,
-        shuffle=False,
-        sampler=student_sampler,
-        num_workers=num_workers,
-        pin_memory=torch.cuda.is_available(),
-    )
-
-    tr_loader_teacher = DataLoader(
-        teacher_train_ds,
-        batch_size=batch_size,
-        shuffle=False,
-        sampler=teacher_sampler,
-        num_workers=num_workers,
-        pin_memory=torch.cuda.is_available(),
-    )
-
-    # Validation loader (deterministic ordering)
-    val_ds = datasets.ImageFolder(data_path / "val", transform=val_tf)
-    val_loader = DataLoader(
-        val_ds,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        pin_memory=torch.cuda.is_available(),
-    )
-
-    # Near-balanced data; no loss weighting
-    class_weight_tensor = None
-
-    return tr_loader_student, tr_loader_teacher, val_loader, class_weight_tensor

@@ -1,0 +1,52 @@
+data:
+  aug:
+    color_jitter:
+    - 0.15
+    - 0.15
+    - 0.15
+    - 0.0
+    rand_hflip: 0.5
+    random_erasing:
+    - 0.0
+    - 0.02
+    - 0.12
+    - 0.3
+    - 3.3
+  batch: 256
+  mean:
+  - 0.485
+  - 0.456
+  - 0.406
+  num_workers: 4
+  path: data/vww96
+  size: 96
+  std:
+  - 0.229
+  - 0.224
+  - 0.225
+meta:
+  amp: true
+  device: auto
+  name: teacher_mbv3l_vww96
+  out_dir: runs
+  seed: 42
+model:
+  pretrained: true
+  type: mobilenet_v3_large
+train:
+  early_stop_patience: 4
+  epochs: 15
+  grad_clip_norm: 0.0
+  init_checkpoint: saved_runs/2025-10-24_21-17-59_teacher_mbv3l_vww244/model.pt
+  label_smoothing: 0.02
+  optimizer:
+    lr: 0.0003
+    name: adamw
+    weight_decay: 0.0001
+  save_full_checkpt: true
+  scheduler:
+    div_factor: 10.0
+    final_div_factor: 1000.0
+    max_lr: 0.0003
+    name: onecycle
+    pct_start: 0.1

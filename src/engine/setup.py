@@ -40,6 +40,17 @@ def build_context(config_path: Path, stage: str = None):
     # model
     model = build_model(config["model"]["type"], config["model"]["pretrained"]).to(device)
 
+    init_checkpoint = config["train"].get("init_checkpoint")
+    if init_checkpoint:
+        checkpoint_path = Path(init_checkpoint)
+        ckpt = torch.load(checkpoint_path, map_location="cpu")
+        state_dict = ckpt.get("model", ckpt)
+        missing, unexpected = model.load_state_dict(state_dict, strict=False)
+        if missing or unexpected:
+            print(
+                f"[build_context] Loaded init checkpoint {checkpoint_path} with missing={missing} unexpected={unexpected}"
+            )
+
     # criterion/loss
     criterion = CrossEntropyLoss(
         weight=class_weight_tensor.to(device) if class_weight_tensor else None,

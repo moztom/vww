@@ -14,7 +14,7 @@ def kd_loss(student_logits, teacher_logits, targets, alpha, T, label_smoothing=0
         reduction="batchmean",
     ) * (T**2)
 
-    kd_loss = alpha * ce + (1 - alpha) * kl
+    kd_loss = alpha * kl + (1 - alpha) * ce
 
     return kd_loss, ce, kl
 

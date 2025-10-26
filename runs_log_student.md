@@ -29,7 +29,6 @@ failed to converge - likely due to teacher being given same 96x96 inputs as stud
 **Goal:** Better performance
 
 **Change vs prev:**
-
 Fixed scheduler bug (final_div_factor 20 -> 10000)
 Upscaling teacher inputs to 224x224 resolution
 Remove random erasing (p=0)
@@ -59,7 +58,6 @@ More epochs with more patience?
 **Goal:** Better performance
 
 **Change vs prev:**
-
 New teacher
 More epochs/patience (50/8)
 
@@ -86,7 +84,6 @@ person recall: 0.76
 **Goal:** Better performance
 
 **Change vs prev:**
-
 Added alpha schedule
 
 **Config:**
@@ -121,12 +118,11 @@ Your best accuracy occurs with moderate KD (alpha ≈ 0.5–0.6). Past that, ext
 ---
 
 (on PC)
-**Run:** (4) 2025-10-25_21-44-06_student_mbv3s_vww96
+**Run:** (5) 2025-10-25_21-44-06_student_mbv3s_vww96
 
 **Goal:** Better performance
 
 **Change vs prev:**
-
 Constant alpha at 0.7
 
 **Config:**
@@ -147,12 +143,11 @@ person recall: 0.76
 ---
 
 (on PC)
-**Run:** (4)
+**Run:** (6) 2025-10-25_22-24-08_student_mbv3s_vww96
 
 **Goal:** slight boost to accuracy?
 
 **Change vs prev:**
-
 Same config, but with NO augs on teacher input data
 
 **Config:**
@@ -166,10 +161,66 @@ val_acc= 0.8080 (epoch 20)
 no person recall: 0.83
 person recall: 0.76
 
-No improvement
+No improvement - teacher SHOULD see same augmented images as student.
 
 **Confusion highlights:**
 [[3550  709]
  [ 921 2879]]
+
+---
+
+(on PC)
+**Run:** (7) 2025-10-26_11-36-15_student_mbv3s_vww96
+
+**Goal:** slight boost to accuracy?
+
+**Change vs prev:**
+reverse no augs, and set alpha -> 0.5, and T -> 2.
+
+**Config:**
+alpha = 0.5
+temp = 2.0
+
+teacher = '2025-10-24_21-17-59_teacher_mbv3l_vww244\model.pt'
+
+**Result:**
+val_acc= 0.8094 (epoch 16)
+no person recall: 0.85
+person recall: 0.74
+
+no improvement
+
+**Confusion highlights:**
+[[3624  635]
+ [ 996 2804]]
+
+---
+
+(on PC)
+**Run:** (8)
+
+**Goal:** slight boost to accuracy?
+
+**Change vs prev:**
+(alpha now scales kl and inverses ce - opposite of before)
+alpha -> 0.7
+T -> 5
+
+**Config:**
+alpha = 0.7
+temp = 5.0
+
+teacher = '2025-10-24_21-17-59_teacher_mbv3l_vww244\model.pt'
+
+**Result:**
+val_acc= 0.8094 (epoch 16)
+no person recall: 0.85
+person recall: 0.74
+
+no improvement
+
+**Confusion highlights:**
+[[3624  635]
+ [ 996 2804]]
 
 ---

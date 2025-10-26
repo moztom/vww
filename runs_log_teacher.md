@@ -30,7 +30,6 @@ person recall: 0.91
 **Goal:** re-run with bugs fixed
 
 **Change vs prev:**
-
 Fixed scheduler bug (final_div_factor 20 -> 10000)
 Also fixed grad clipping bug (scaling gradients to zero oops)
 

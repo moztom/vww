@@ -490,3 +490,38 @@ Much more stable, better performance (apart from person recall)
  [ 937 2863]]
 
 ---
+
+(on PC)
+**Run:** (15) 2025-10-27_21-10-40_baseline_mbv3s_vww96
+
+**Goal:** Test performance with imagenet-pretrained weight
+
+**Change vs prev:**
+initializing the model with imagenet weights
+Everything else the same
+
+**Config:**
+96×96
+bs=256
+30 epochs
+lr=0.001
+Optimiser: AdamW - weight_decay=1e-4
+Loss fcn: CrossEntropyLoss - label_smoothing=0.05
+scheduler: OneCycleLR - max_lr=0.001, pct_start=0.05, div_factor=20.0, final_div_factor=1000, anneal_strategy="cos"
+seed=42
+
+**Data:**
+Imagenet mean/std normalization
+RandomHorizontalFlip (p=0.5)
+ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.0)
+RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3))
+
+**Result:**
+val_acc= 0.8486 (epoch 3)
+
+no person recall: 0.87
+person recall: 0.82
+
+**Confusion highlights:**
+
+---

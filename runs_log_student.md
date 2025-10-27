@@ -552,3 +552,42 @@ No improvement.
  [ 851 2949]]
 
 ---
+
+(on PC)
+**Run:** (17)
+
+**Goal:** test performance on imagenet PRETRAINED weights
+
+**Change vs prev:**
+Using pretrained weights (baseline got to 0.8486)
+All other config taken from best prev run (run 11)
+
+**Config:**
+kd:
+alpha: 0.55
+alpha_constant: true
+confidence_gamma: 2.0
+label_smoothing: 0.01
+margin_weight: 0.0
+margin_weight_decay_end_epoch: 20
+margin_weight_end: 0.0
+margin_weight_start: 0.04
+teacher:
+arch: mobilenet_v3_large
+checkpt: runs\2025-10-26_17-53-08_teacher_mbv3l_vww96\model.pt
+pretrained: true
+teacher_input_size: 96
+temperature: 2.0
+
+**Result:**
+val_acc=
+no person recall:
+person recall:
+
+No improvement.
+
+**Confusion highlights:**
+[[3566  693]
+ [ 851 2949]]
+
+---

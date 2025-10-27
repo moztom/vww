@@ -19,7 +19,7 @@ data:
 
 model:
     type: 'mobilenet_v3_small' # mobilenet_v3_small | mobilenet_v3_large
-    pretrained: false
+    pretrained: true
     # dropout: 0.0 ?
 
 train:
@@ -30,11 +30,11 @@ train:
     save_full_checkpt: true
     optimizer:
         name: 'adamw'
-        lr: 0.001
+        lr: 0.0007
         weight_decay: 0.0001
     scheduler:
         name: 'onecycle'
-        max_lr: 0.001
+        max_lr: 0.0007
         pct_start: 0.05
         div_factor: 20.0
         final_div_factor: 10000.0

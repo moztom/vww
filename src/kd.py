@@ -44,11 +44,9 @@ def main():
         Defaults:
           start=0.9, end=ctx["kd_alpha"], warmup=5, decay_end=ctx["epochs"].
         """
-        if ctx.get("kd_alpha_constant"):
-            return float(ctx["kd_alpha"])
 
         # Don't change alpha if constant flag set
-        if ctx["kd_alpha_constant"]:
+        if ctx.get("kd_alpha_constant"):
             return float(ctx["kd_alpha"])
         
         total_epochs = ctx["epochs"]

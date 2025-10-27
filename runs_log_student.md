@@ -395,7 +395,7 @@ less kl, more ce improved things
 ---
 
 (on PC)
-**Run:** (11) 2025-10-27_16-43-53_student_mbv3s_vww96_kd_c
+**Run:** (12) 2025-10-27_16-43-53_student_mbv3s_vww96_kd_c
 
 **Goal:** Further 3 runs tweaking params - next, more confidence weight
 
@@ -436,7 +436,7 @@ more confidence weighted KL improved performance
 ---
 
 (on PC)
-**Run:** (12) runs\2025-10-27_17-45-28_student_mbv3s_vww96
+**Run:** (13) runs\2025-10-27_17-45-28_student_mbv3s_vww96
 
 **Goal:** Further 3 runs tweaking params - finally, less margin
 
@@ -490,7 +490,7 @@ Best config is 0.55/2.0
 
 ---
 
-**Run:** (13) 2025-10-27_19-22-37_student_mbv3s_vww96
+**Run:** (14) 2025-10-27_19-22-37_student_mbv3s_vww96
 alpha 0.55
 conf. gamma 2.5
 
@@ -499,11 +499,56 @@ worse performance
 
 ---
 
-**Run:** (14) 2025-10-27_19-50-32_student_mbv3s_vww96
+**Run:** (15) 2025-10-27_19-50-32_student_mbv3s_vww96
 alpha 0.52
 conf. gamma 2.0
 
 0.8166
 worse performance
+
+---
+
+(on PC)
+**Run:** (16) 2025-10-27_20-32-46_student_mbv3s_vww96
+
+**Goal:** try margin scheduler on run 11 config (0.8202)
+
+**Change vs prev:**
+0.55/2.0 with stronger inital margin with decay to 0 at epoch 20
+
+a=0.55
+conf=2
+margin start= 0.04
+margin end= 0
+margin decay end epoc= 20 (25 epoch run)
+ls=0.01
+
+**Config:**
+kd:
+alpha: 0.55
+alpha_constant: true
+confidence_gamma: 2.0
+label_smoothing: 0.01
+margin_weight: 0.0
+margin_weight_decay_end_epoch: 20
+margin_weight_end: 0.0
+margin_weight_start: 0.04
+teacher:
+arch: mobilenet_v3_large
+checkpt: runs\2025-10-26_17-53-08_teacher_mbv3l_vww96\model.pt
+pretrained: true
+teacher_input_size: 96
+temperature: 2.0
+
+**Result:**
+val_acc= 0.8141 (epoch 17)
+no person recall: 0.84
+person recall: 0.78
+
+No improvement.
+
+**Confusion highlights:**
+[[3566  693]
+ [ 851 2949]]
 
 ---

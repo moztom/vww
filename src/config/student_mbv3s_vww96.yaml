@@ -23,7 +23,7 @@ model:
     # dropout: 0.0 ?
 
 train:
-    epochs: 27
+    epochs: 25
     label_smoothing: 0.0
     early_stop_patience: 10
     grad_clip_norm: 2.0
@@ -44,10 +44,13 @@ kd:
         checkpt: 'runs\2025-10-26_17-53-08_teacher_mbv3l_vww96\model.pt'
         arch: 'mobilenet_v3_large'
         pretrained: true
-    alpha: 0.52
+    alpha: 0.55
     alpha_constant: true
     temperature: 2.0
     teacher_input_size: 96
     label_smoothing: 0.01
     confidence_gamma: 2.0
     margin_weight: 0.03
+    margin_weight_start:
+    margin_weight_end:
+    margin_weight_decay_end_epoch:

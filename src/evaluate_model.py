@@ -15,7 +15,7 @@ def main():
     ap.add_argument("--model_path", required=True, type=Path, help="Path to model (.pt)")
     ap.add_argument("--data_path", required=True, type=Path, help="Path to data (e.g. data/vww96)")
     ap.add_argument("--batch_size", required=True, type=int, help="Batch size (128 or 256)")
-    ap.add_argument("--teacher", required=False, type=bool, help="Evaluating teacher model?")
+    ap.add_argument("--teacher", required=False, default=False, type=bool, help="Evaluating teacher model?")
     args = ap.parse_args()
 
     model = build_model(args.model_type)

@@ -54,23 +54,49 @@ def init_logging(config: dict, device: str):
     return run_dir, writer
 
 
-def log_epoch(writer, run_dir: Path, epoch: int, tr_loss, tr_acc, va_loss, va_acc, lr=None, ce=None, kl=None, alpha=None):
+def log_epoch(
+    writer,
+    run_dir: Path,
+    epoch: int,
+    tr_loss,
+    tr_acc,
+    va_loss,
+    va_acc,
+    lr=None,
+    ce=None,
+    kl=None,
+    alpha=None,
+    margin=None,
+    margin_weight=None,
+):
     """ Log epoch metrics to TensorBoard and JSONL file """
 
     writer.add_scalar("train loss", float(tr_loss), epoch)
-    writer.add_scalar("ce_loss", float(ce), epoch) if ce is not None else None
-    writer.add_scalar("kl_loss", float(kl), epoch) if kl is not None else None
+    if ce is not None:
+        writer.add_scalar("ce_loss", float(ce), epoch)
+    if kl is not None:
+        writer.add_scalar("kl_loss", float(kl), epoch)
+    if margin is not None:
+        writer.add_scalar("margin_loss", float(margin), epoch)
+    if margin_weight is not None:
+        writer.add_scalar("margin_weight", float(margin_weight), epoch)
     writer.add_scalar("train acc", float(tr_acc), epoch)
     writer.add_scalar("val loss", float(va_loss), epoch)
     writer.add_scalar("val acc", float(va_acc), epoch)
-    writer.add_scalar("lr", float(lr), epoch) if lr is not None else None
+    if lr is not None:
+        writer.add_scalar("lr", float(lr), epoch)
 
-    if ce and kl and alpha:
+    if (ce is not None) and (kl is not None) and (alpha is not None):
         with open(run_dir / "metrics.jsonl", "a") as file:
             file.write(json.dumps({
-                "epoch": epoch, "alpha": float(alpha), "train_loss": f"{float(tr_loss)} (ce {float(ce)}, kl {float(kl)})",
-                "train_acc": float(tr_acc), "val_loss": float(va_loss),
-                "val_acc": float(va_acc), "lr": float(lr) if lr is not None else None
+                "epoch": epoch,
+                "alpha": float(alpha),
+                "margin_weight": None if margin_weight is None else float(margin_weight),
+                "train_loss": f"{float(tr_loss)} (ce {float(ce)}, kl {float(kl)}{'' if margin is None else f', margin {float(margin)}'})",
+                "train_acc": float(tr_acc),
+                "val_loss": float(va_loss),
+                "val_acc": float(va_acc),
+                "lr": float(lr) if lr is not None else None
             }) + "\n")
     else:
         with open(run_dir / "metrics.jsonl", "a") as file:

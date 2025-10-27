@@ -79,9 +79,40 @@ def main():
         t = (epoch - warmup) / span
         return float(start + t * (end - start))
 
+    def _compute_margin_weight(epoch: int) -> float:
+        """Optional linear schedule for margin loss weight."""
+
+        base = float(ctx.get("kd_margin_weight", 0.0))
+        start = ctx.get("kd_margin_weight_start")
+        end = ctx.get("kd_margin_weight_end")
+        decay_end = ctx.get("kd_margin_decay_end_epoch")
+
+        # If no schedule provided fall back to constant weight
+        if start is None and end is None and decay_end is None:
+            return base
+
+        if start is None:
+            start = base
+        if end is None:
+            end = base
+        if decay_end is None:
+            decay_end = ctx["epochs"]
+
+        start = float(start)
+        end = float(end)
+        decay_end = max(1, int(decay_end))
+
+        if epoch >= decay_end:
+            return end
+
+        span = max(1, decay_end - 1)
+        progress = max(0.0, min(1.0, (epoch - 1) / span))
+        return float(start + progress * (end - start))
+
     for epoch in range(1, ctx["epochs"] + 1):
         epoch_start = time.perf_counter()
         epoch_alpha = _compute_alpha(epoch)
+        epoch_margin = _compute_margin_weight(epoch)
 
         tr_loss, tr_acc, tr_ce, tr_kl, tr_margin = kd_train_one_epoch(
             ctx["model"],
@@ -98,7 +129,7 @@ def main():
             label_smoothing=ctx.get("kd_label_smoothing", 0.0),
             teacher_input_size=ctx.get("kd_teacher_input_size"),
             confidence_gamma=ctx.get("kd_confidence_gamma"),
-            margin_weight=ctx.get("kd_margin_weight", 0.0),
+            margin_weight=epoch_margin,
         )
 
         va_loss, va_acc, *_ = evaluate(ctx["model"], ctx["val_loader"], ctx["device"])
@@ -118,12 +149,14 @@ def main():
             ce=tr_ce,
             kl=tr_kl,
             alpha=epoch_alpha,
+            margin=tr_margin,
+            margin_weight=epoch_margin,
         )
 
         margin_str = f", margin {tr_margin:.4f}" if tr_margin > 0 else ""
         print(
             f"[{epoch}/{ctx['epochs']}] "
-            f"alpha {epoch_alpha:.3f} | "
+            f"alpha {epoch_alpha:.3f} | margin_w {epoch_margin:.4f} | "
             f"train loss {tr_loss:.4f} (ce {tr_ce:.4f}, kl {tr_kl:.4f}{margin_str}) acc {tr_acc:.4f} | "
             f"val loss {va_loss:.4f} acc {va_acc:.4f} | "
             f"epoch time {epoch_elapsed:.1f}s | elapsed time {elapsed_total/60:.1f}m"

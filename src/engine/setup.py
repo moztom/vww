@@ -122,7 +122,10 @@ def build_context(config_path: Path, stage: str = None):
             "kd_alpha_constant": kd_cfg.get("alpha_constant", None),
             "kd_teacher_input_size": kd_cfg.get("teacher_input_size"),
             "kd_confidence_gamma": kd_cfg.get("confidence_gamma"),
-            "kd_margin_weight": kd_cfg.get("margin_weight", 0.0),
+            "kd_margin_weight": float(kd_cfg.get("margin_weight", 0.0)),
+            "kd_margin_weight_start": kd_cfg.get("margin_weight_start"),
+            "kd_margin_weight_end": kd_cfg.get("margin_weight_end"),
+            "kd_margin_decay_end_epoch": kd_cfg.get("margin_weight_decay_end_epoch"),
             "kd_label_smoothing": kd_cfg.get("label_smoothing", 0.0),
         })
 

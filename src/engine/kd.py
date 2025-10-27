@@ -51,7 +51,7 @@ def kd_loss(
 def kd_train_one_epoch(
     student,
     teacher,
-    student_loader,
+    loader,
     device,
     optimizer,
     scheduler,
@@ -60,21 +60,13 @@ def kd_train_one_epoch(
     alpha,
     T,
     grad_clip_norm,
-    *,
-    teacher_loader=None,
-    teacher_view="student",
     label_smoothing=0.0, # shouldn't really use label smoothing with kd
     teacher_input_size=None,
     confidence_gamma=None,
     margin_weight=0.0,
 ):
-    """Train the student for one epoch with KD.
-
-    If ``teacher_loader`` is None or ``teacher_view == 'student'`` the teacher
-    reuses the student batch (augmented view). Otherwise the teacher consumes a
-    separate loader (typically non-augmented) that must stay index-aligned.
-    """
-
+    """ Train the student model for one epoch with knowledge distillation """
+    
     student.train()
     teacher.eval()
     total, correct = 0, 0
@@ -82,39 +74,23 @@ def kd_train_one_epoch(
     t_size = int(teacher_input_size) if teacher_input_size else None
     nonblock = torch.cuda.is_available()
 
-    teacher_view = teacher_view.lower()
-    use_same_view = teacher_loader is None or teacher_view == "student"
-
-    if not use_same_view and teacher_loader is not None:
-        if len(student_loader) != len(teacher_loader):
-            raise RuntimeError("Student and teacher loaders must have equal length for KD.")
-        paired_iter = zip(student_loader, teacher_loader)
-    else:
-        paired_iter = ((batch, batch) for batch in student_loader)
-
-    for (imgs_s, labels_s), (imgs_t, labels_t) in paired_iter:
-        if not use_same_view and not torch.equal(labels_s, labels_t):
-            raise RuntimeError("Student/teacher loaders out of sync; labels differ.")
+    for imgs, labels in loader:
+        
+        imgs, labels = imgs.to(device, non_blocking=nonblock), labels.to(
+            device, non_blocking=nonblock
+        )
 
         optimizer.zero_grad(set_to_none=True)
 
-        imgs_s = imgs_s.to(device, non_blocking=nonblock)
-        labels = labels_s.to(device, non_blocking=nonblock)
-
-        if use_same_view:
-            imgs_t = imgs_s
-        else:
-            imgs_t = imgs_t.to(device, non_blocking=nonblock)
-
         with torch.no_grad():
-            t_in = imgs_t
-            if t_size and t_size != t_in.shape[-1]:
-                t_in = F.interpolate(t_in, size=t_size, mode="bilinear", align_corners=False)
+            t_in = imgs
+            if t_size and t_size != imgs.shape[-1]:
+                t_in = F.interpolate(imgs, size=t_size, mode="bilinear", align_corners=False)
             teacher_logits = teacher(t_in)
-
+        
         # Forward
         with autocast:
-            student_logits = student(imgs_s)
+            student_logits = student(imgs)
             loss, ce_loss, kl_loss, margin_loss = kd_loss(
                 student_logits,
                 teacher_logits,
@@ -127,14 +103,14 @@ def kd_train_one_epoch(
             )
 
         # Backward
-        if scaler:  # CUDA
+        if scaler: # CUDA
             scaler.scale(loss).backward()
             if grad_clip_norm and grad_clip_norm > 0:
                 scaler.unscale_(optimizer)
                 clip_grad_norm_(student.parameters(), grad_clip_norm)
             scaler.step(optimizer)
             scaler.update()
-        else:  # MPS and CPU
+        else: # MPS and CPU
             loss.backward()
             if grad_clip_norm and grad_clip_norm > 0:
                 clip_grad_norm_(student.parameters(), grad_clip_norm)
@@ -142,7 +118,7 @@ def kd_train_one_epoch(
 
         if scheduler:
             scheduler.step()
-
+        
         batch_size = labels.size(0)
         loss_sum += loss.item() * batch_size
         ce_sum += ce_loss.item() * batch_size
@@ -153,7 +129,7 @@ def kd_train_one_epoch(
             margin_sum += margin_loss * batch_size
         correct += (student_logits.argmax(1) == labels).sum().item()
         total += batch_size
-
+    
     tr_loss = loss_sum / total
     tr_acc = correct / total
     tr_ce = ce_sum / total

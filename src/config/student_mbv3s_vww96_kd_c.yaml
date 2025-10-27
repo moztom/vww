@@ -47,8 +47,8 @@ kd:
     alpha_constant: true
     temperature: 2.0
     teacher_input_size: 96
-    label_smoothing: 0.0
-    confidence_gamma: 2.0
+    label_smoothing: 0.01
+    confidence_gamma: 2.5
     margin_weight: 0.0
     margin_weight_start: 0.04
     margin_weight_end: 0.0

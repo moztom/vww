@@ -83,6 +83,15 @@ def main():
         epoch_start = time.perf_counter()
         epoch_alpha = _compute_alpha(epoch)
 
+        student_sampler = getattr(ctx["tr_loader"], "sampler", None)
+        if hasattr(student_sampler, "set_epoch"):
+            student_sampler.set_epoch(epoch)
+
+        teacher_loader = ctx.get("teacher_tr_loader")
+        teacher_sampler = getattr(teacher_loader, "sampler", None) if teacher_loader else None
+        if teacher_loader and hasattr(teacher_sampler, "set_epoch"):
+            teacher_sampler.set_epoch(epoch)
+
         tr_loss, tr_acc, tr_ce, tr_kl, tr_margin = kd_train_one_epoch(
             ctx["model"],
             ctx["teacher"],
@@ -95,6 +104,8 @@ def main():
             epoch_alpha,
             ctx["kd_temp"],
             ctx["grad_clip_norm"],
+            teacher_loader=teacher_loader,
+            teacher_view=ctx.get("kd_teacher_view", "student"),
             label_smoothing=ctx.get("kd_label_smoothing", 0.0),
             teacher_input_size=ctx.get("kd_teacher_input_size"),
             confidence_gamma=ctx.get("kd_confidence_gamma"),

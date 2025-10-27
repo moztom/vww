@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import OneCycleLR
 from torch.amp import GradScaler
 
 from src.engine.utils import set_seed, init_logging
-from src.data import build_dataloaders
+from src.data import build_dataloaders, build_kd_dataloaders
 from src.models import build_model
 
 
@@ -25,17 +25,33 @@ def build_context(config_path: Path, stage: str = None):
     # device
     device = _pick_device(config["meta"].get("device", "auto"))
 
+    teacher_tr_loader = None
+    kd_cfg = config.get("kd", {}) if stage == "kd" else {}
+
     # data
-    tr_loader, val_loader, class_weight_tensor = build_dataloaders(
-        data_path=Path(config["data"]["path"]),
-        batch_size=config["data"]["batch"],
-        num_workers=config["data"]["num_workers"],
-        mean=config["data"]["mean"],
-        std=config["data"]["std"],
-        rhf=config["data"]["aug"]["rand_hflip"],
-        cj=config["data"]["aug"]["color_jitter"],
-        re=config["data"]["aug"]["random_erasing"],
-    )
+    if stage == "kd":
+        tr_loader, teacher_tr_loader, val_loader, class_weight_tensor = build_kd_dataloaders(
+            data_path=Path(config["data"]["path"]),
+            batch_size=config["data"]["batch"],
+            num_workers=config["data"]["num_workers"],
+            mean=config["data"]["mean"],
+            std=config["data"]["std"],
+            rhf=config["data"]["aug"]["rand_hflip"],
+            cj=config["data"]["aug"]["color_jitter"],
+            re=config["data"]["aug"]["random_erasing"],
+            teacher_view=kd_cfg.get("teacher_view", "student"),
+        )
+    else:
+        tr_loader, val_loader, class_weight_tensor = build_dataloaders(
+            data_path=Path(config["data"]["path"]),
+            batch_size=config["data"]["batch"],
+            num_workers=config["data"]["num_workers"],
+            mean=config["data"]["mean"],
+            std=config["data"]["std"],
+            rhf=config["data"]["aug"]["rand_hflip"],
+            cj=config["data"]["aug"]["color_jitter"],
+            re=config["data"]["aug"]["random_erasing"],
+        )
 
     # model
     model = build_model(config["model"]["type"], config["model"]["pretrained"]).to(device)
@@ -108,9 +124,10 @@ def build_context(config_path: Path, stage: str = None):
             p.requires_grad_(False)
         
         # Optional KD alpha scheduling parameters
-        kd_cfg = config.get("kd", {})
         context.update({
             "teacher": teacher,
+            "teacher_tr_loader": teacher_tr_loader,
+            "kd_teacher_view": kd_cfg.get("teacher_view", "student"),
             "kd_alpha": float(kd_cfg.get("alpha", 0.5)),
             "kd_temp": float(kd_cfg.get("temperature", 4.0)),
             # Optional scheduling controls (all optional)

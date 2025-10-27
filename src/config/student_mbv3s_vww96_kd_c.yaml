@@ -43,6 +43,7 @@ kd:
         checkpt: 'runs\2025-10-26_17-53-08_teacher_mbv3l_vww96\model.pt'
         arch: 'mobilenet_v3_large'
         pretrained: true
+    teacher_view: 'clean'  # options: 'student' or 'clean'
     alpha: 0.6
     alpha_constant: true
     temperature: 2.0

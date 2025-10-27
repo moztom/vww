@@ -545,7 +545,7 @@ val_acc= 0.8141 (epoch 17)
 no person recall: 0.84
 person recall: 0.78
 
-No improvement.
+No improvement
 
 **Confusion highlights:**
 [[3566  693]

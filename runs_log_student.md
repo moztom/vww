@@ -554,13 +554,14 @@ No improvement
 ---
 
 (on PC)
-**Run:** (17)
+**Run:** (17) 2025-10-27_21-51-06_student_mbv3s_vww96
 
 **Goal:** test performance on imagenet PRETRAINED weights
 
 **Change vs prev:**
 Using pretrained weights (baseline got to 0.8486)
 All other config taken from best prev run (run 11)
+lr 0.001 -> 0.0007
 
 **Config:**
 kd:
@@ -580,14 +581,115 @@ teacher_input_size: 96
 temperature: 2.0
 
 **Result:**
-val_acc=
-no person recall:
-person recall:
+val_acc= 0.8680 (epoch 13)
+no person recall: 0.89
+person recall: 0.84
 
 No improvement.
 
 **Confusion highlights:**
-[[3566  693]
- [ 851 2949]]
+[[3780  479]
+ [ 607 3193]]
+
+---
+
+(on PC)
+**Run:** (18) 2025-10-28_13-57-45_student_mbv3s_vww96
+
+**Goal:** Using NATIVE 96 trained teacher (mobilenetv3large), and still using PRETRAINED weights on student
+This should be compared to run 17
+
+**Change vs prev:**
+Pretrained weights on student
+different teacher - 96 native trained (rather than 224 teacher fine tuned in 96)
+All other config taken from best prev run (run 11/17)
+
+**Config:**
+kd:
+alpha: 0.55
+alpha_constant: true
+confidence_gamma: 2.0
+label_smoothing: 0.01
+margin_weight: 0.03
+margin_weight_decay_end_epoch: null
+margin_weight_end: null
+margin_weight_start: null
+teacher:
+arch: mobilenet_v3_large
+checkpt: runs\2025-10-28_13-29-51_teacher_mbv3l_vww96_native\model.pt
+pretrained: true
+teacher_input_size: 96
+temperature: 2.0
+
+**Result:**
+val_acc= 0.8655 (epoch 17)
+no person recall: 0.88
+person recall: 0.83
+
+No improvement with
+
+**Confusion highlights:**
+[[3761  498]
+ [ 631 3169]]
+
+---
+
+(on PC)
+**Run:** (19) 2025-10-28_15-31-21_student_mbv3s_vww96
+
+**Goal:** Quick sanity check with non-pretrained student on native-96 (mobilenetv3large) teacher. Will it go higher than run 11 (0.8202)?
+
+**Change vs prev:**
+no pretrained on student
+lr back to 0.001
+
+**Config:**
+same as last run
+
+**Result:**
+val_acc= 0.8078 (epoch 18)
+no person recall: 0.84
+person recall: 0.76
+
+No it doesn't. The teacher, even though scoring slightly higher accuracy while it was trained, is less useful for the student than the teacher trained at 224, and fine-tuned to 96.
+
+**Confusion highlights:**
+
+---
+
+(on PC)
+**Run:** (20) 2025-10-28_15-21-12_student_mbv3s_vww96
+
+**Goal:** Using an EfficientNet teacher (~0.89 acc)
+
+**Change vs prev:**
+Same config as run 11/17, but with better teacher (only slightly better - 0.8862 vs 0.8992)
+(lr back to 0.0007)
+
+**Config:**
+kd:
+alpha: 0.55
+alpha_constant: true
+confidence_gamma: 2.0
+label_smoothing: 0.01
+margin_weight: 0.03
+margin_weight_decay_end_epoch: null
+margin_weight_end: null
+margin_weight_start: null
+teacher:
+arch: efficientnet_b2
+checkpt: runs\2025-10-27_22-30-33_teacher_effnetb2_vww96\model.pt
+pretrained: true
+teacher_input_size: 96
+temperature: 2.0
+
+**Result:**
+val_acc= 0.8610 (epoch 15)
+no person recall: 0.88
+person recall: 0.84
+
+**Confusion highlights:**
+[[3733  526]
+ [ 617 3183]]
 
 ---

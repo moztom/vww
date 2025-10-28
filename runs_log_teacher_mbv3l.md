@@ -187,3 +187,16 @@ No improvement.
  [ 533 3267]]
 
 ---
+
+(on PC)
+**Run:** (7) 2025-10-28_13-29-51_teacher_mbv3l_vww96_native
+
+Training directly on 96 rather than fine-tuning from 224 to 96
+
+**Result:**
+val_acc= 0.8876 (epoch 4)
+
+no person recall: 0.90
+person recall: 0.86
+
+---

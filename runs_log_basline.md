@@ -525,3 +525,40 @@ person recall: 0.82
 **Confusion highlights:**
 
 ---
+
+(on PC)
+**Run:** (16) 2025-10-27_21-51-09_baseline_mbv3s_vww96
+
+**Goal:** Tweak training config to match pretrained weights
+
+**Change vs prev:**
+lr -> 0.0007
+re p=0 (turned off random erasing to match student)
+
+**Config:**
+96×96
+bs=256
+30 epochs
+lr=0.0007
+Optimiser: AdamW - weight_decay=1e-4
+Loss fcn: CrossEntropyLoss - label_smoothing=0.05
+scheduler: OneCycleLR - max_lr=0.0007, pct_start=0.05, div_factor=20.0, final_div_factor=1000, anneal_strategy="cos"
+seed=42
+
+**Data:**
+Imagenet mean/std normalization
+RandomHorizontalFlip (p=0.5)
+ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.0)
+RandomErasing(p=0.0, scale=(0.02, 0.12), ratio=(0.3, 3.3))
+
+**Result:**
+val_acc= 0.8562 (epoch 19)
+
+no person recall: 0.87
+person recall: 0.83
+
+**Confusion highlights:**
+[[3715  544]
+ [ 633 3167]]
+
+---

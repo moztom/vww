@@ -1,0 +1,63 @@
+data:
+  aug:
+    color_jitter:
+    - 0.2
+    - 0.2
+    - 0.2
+    - 0.0
+    rand_hflip: 0.5
+    random_erasing:
+    - 0.0
+    - 0.02
+    - 0.12
+    - 0.3
+    - 3.3
+  batch: 256
+  mean:
+  - 0.485
+  - 0.456
+  - 0.406
+  num_workers: 4
+  path: data/vww96
+  std:
+  - 0.229
+  - 0.224
+  - 0.225
+kd:
+  alpha: 0.55
+  alpha_constant: true
+  confidence_gamma: 0.0
+  label_smoothing: 0.0
+  margin_weight: 0.0
+  teacher:
+    arch: mobilenet_v3_large
+    checkpt: saved_runs/2025-10-26_17-53-08_teacher_mbv3l_vww96/model.pt
+    pretrained: true
+  teacher_input_size: 96
+  temperature: 3.0
+meta:
+  amp: true
+  device: auto
+  name: student_mbv3s_vww96_kd_refine
+  out_dir: runs
+  seed: 42
+model:
+  pretrained: true
+  type: mobilenet_v3_small
+train:
+  early_stop_patience: 10
+  epochs: 20
+  grad_clip_norm: 2.0
+  init_checkpoint: saved_runs/2025-10-27_21-51-06_student_mbv3s_vww96/model.pt
+  label_smoothing: 0.0
+  optimizer:
+    lr: 7.0e-05
+    name: adamw
+    weight_decay: 0.0001
+  save_full_checkpt: true
+  scheduler:
+    div_factor: 10.0
+    final_div_factor: 1000.0
+    max_lr: 7.0e-05
+    name: onecycle
+    pct_start: 0.3

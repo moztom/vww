@@ -709,3 +709,28 @@ effnet @96 (0.9115)
 0.8517
 
 ---
+
+FINE-TUNING BEST STUDENT (RUN 17 - 0.8680)
+fine tune on same teacher
+
+lr reduced (max_lr) (0.001 -> 0.0008)
+
+Run 1 - 2025-10-31_21-15-07_student_mbv3s_vww96_kd_refine
+6 epochs
+acc - 0.8671 (epoch 6)
+promising, try more epochs
+
+Run 2 - 2025-10-31_21-20-46_student_mbv3s_vww96_kd_refine
+10 epochs (no change to onecycle)
+acc - 0.8690 (epoch 10)
+beat original student, try more epochs
+
+Run 3 - 2025-10-31_21-29-32_student_mbv3s_vww96_kd_refine
+20 epochs (no change to onecycle)
+acc - 0.8676
+didn't improve due to scheduler misconfig with 20 epochs - warmup (0.3) was too long.
+
+Try 20 epochs again but with onecycle configured properly:
+Run 4 - 2025-10-31_22-51-42_student_mbv3s_vww96_kd_refine
+20 epochs (pct_start: 0.3 -> 0.15) make warmup the same as 10 epoch run (3 epochs)
+acc - 0.8671

@@ -6,9 +6,8 @@ meta:
     amp: true
 
 data:
-    size: 96 # 96 or 224
     path: 'data/vww96'
-    batch: 256
+    batch: 128
     num_workers: 4
     mean: [0.485, 0.456, 0.406]
     std: [0.229, 0.224, 0.225]
@@ -41,8 +40,8 @@ train:
 
 kd:
     teacher:
-        checkpt: 'runs\2025-10-26_17-53-08_teacher_mbv3l_vww96\model.pt'
-        arch: 'mobilenet_v3_large'
+        checkpt: 'runs\2025-10-28_22-11-40_teacher_effnetb2_vww96\model.pt'
+        arch: 'efficientnet_b2'
         pretrained: true
     alpha: 0.55
     alpha_constant: true

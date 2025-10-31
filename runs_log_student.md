@@ -660,7 +660,7 @@ No it doesn't. The teacher, even though scoring slightly higher accuracy while i
 (on PC)
 **Run:** (20) 2025-10-28_15-21-12_student_mbv3s_vww96
 
-**Goal:** Using an EfficientNet teacher (~0.89 acc)
+**Goal:** Using an EfficientNet teacher @96 (~0.89 acc)
 
 **Change vs prev:**
 Same config as run 11/17, but with better teacher (only slightly better - 0.8862 vs 0.8992)
@@ -691,5 +691,21 @@ person recall: 0.84
 **Confusion highlights:**
 [[3733  526]
  [ 617 3183]]
+
+---
+
+runs\2025-10-29_23-22-06_student_mbv3s_vww96
+effnet @96 (0.9115)
+256 batch
+
+0.8485
+
+---
+
+runs\2025-10-29_23-22-37_student_mbv3s_vww96
+effnet @96 (0.9115)
+128
+
+0.8517
 
 ---

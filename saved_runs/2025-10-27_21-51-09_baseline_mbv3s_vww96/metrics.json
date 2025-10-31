@@ -1,0 +1,42 @@
+[1/30] train loss 0.5273 acc 0.7474 | val loss 0.4110 acc 0.8173 | epoch time 73.5s | elapsed time 1.2m
+[2/30] train loss 0.4060 acc 0.8397 | val loss 0.4007 acc 0.8195 | epoch time 71.4s | elapsed time 2.4m
+[3/30] train loss 0.3718 acc 0.8607 | val loss 0.3687 acc 0.8408 | epoch time 71.5s | elapsed time 3.6m
+[4/30] train loss 0.3488 acc 0.8746 | val loss 0.3516 acc 0.8456 | epoch time 71.4s | elapsed time 4.8m
+[5/30] train loss 0.3284 acc 0.8869 | val loss 0.3685 acc 0.8409 | epoch time 67.1s | elapsed time 5.9m
+[6/30] train loss 0.3096 acc 0.8971 | val loss 0.3715 acc 0.8425 | epoch time 70.3s | elapsed time 7.1m
+[7/30] train loss 0.2892 acc 0.9100 | val loss 0.3868 acc 0.8413 | epoch time 66.8s | elapsed time 8.2m
+[8/30] train loss 0.2691 acc 0.9216 | val loss 0.3882 acc 0.8441 | epoch time 69.2s | elapsed time 9.4m
+[9/30] train loss 0.2472 acc 0.9342 | val loss 0.3960 acc 0.8471 | epoch time 66.9s | elapsed time 10.5m
+[10/30] train loss 0.2264 acc 0.9462 | val loss 0.4088 acc 0.8448 | epoch time 67.2s | elapsed time 11.6m
+[11/30] train loss 0.2083 acc 0.9570 | val loss 0.4218 acc 0.8446 | epoch time 66.3s | elapsed time 12.7m
+[12/30] train loss 0.1932 acc 0.9653 | val loss 0.4332 acc 0.8423 | epoch time 67.1s | elapsed time 13.8m
+[13/30] train loss 0.1766 acc 0.9740 | val loss 0.4449 acc 0.8430 | epoch time 67.6s | elapsed time 14.9m
+[14/30] train loss 0.1672 acc 0.9791 | val loss 0.4434 acc 0.8435 | epoch time 67.2s | elapsed time 16.1m
+[15/30] train loss 0.1577 acc 0.9849 | val loss 0.4407 acc 0.8484 | epoch time 67.2s | elapsed time 17.2m
+[16/30] train loss 0.1503 acc 0.9885 | val loss 0.4329 acc 0.8490 | epoch time 67.0s | elapsed time 18.3m
+[17/30] train loss 0.1453 acc 0.9906 | val loss 0.4389 acc 0.8490 | epoch time 78.8s | elapsed time 19.6m
+[18/30] train loss 0.1389 acc 0.9940 | val loss 0.4463 acc 0.8480 | epoch time 75.0s | elapsed time 20.9m
+[19/30] train loss 0.1348 acc 0.9955 | val loss 0.4338 acc 0.8562 | epoch time 67.8s | elapsed time 22.0m
+[20/30] train loss 0.1331 acc 0.9962 | val loss 0.4406 acc 0.8481 | epoch time 67.2s | elapsed time 23.1m
+[21/30] train loss 0.1300 acc 0.9974 | val loss 0.4407 acc 0.8512 | epoch time 67.6s | elapsed time 24.2m
+[22/30] train loss 0.1280 acc 0.9981 | val loss 0.4373 acc 0.8521 | epoch time 67.6s | elapsed time 25.4m
+[23/30] train loss 0.1268 acc 0.9983 | val loss 0.4332 acc 0.8497 | epoch time 67.5s | elapsed time 26.5m
+[24/30] train loss 0.1258 acc 0.9988 | val loss 0.4299 acc 0.8528 | epoch time 56.8s | elapsed time 27.4m
+[25/30] train loss 0.1249 acc 0.9989 | val loss 0.4316 acc 0.8552 | epoch time 55.2s | elapsed time 28.4m
+[26/30] train loss 0.1242 acc 0.9992 | val loss 0.4303 acc 0.8544 | epoch time 55.5s | elapsed time 29.3m
+[27/30] train loss 0.1237 acc 0.9993 | val loss 0.4296 acc 0.8540 | epoch time 55.3s | elapsed time 30.2m
+No improvement in 8 epochs, stopping early
+
+VALIDATION SUMMARY
+
+Best checkpoint: val acc = 0.8562 (epoch 19) (runs\2025-10-27_21-51-09_baseline_mbv3s_vww96\model.pt)
+Total training time: 30.2mins (1812.2s)
+
+Confusion matrix:
+[[3715  544]
+ [ 633 3167]]
+   person(1)       0.85      0.83      0.84      3800
+
+    accuracy                           0.85      8059
+   macro avg       0.85      0.85      0.85      8059
+weighted avg       0.85      0.85      0.85      8059

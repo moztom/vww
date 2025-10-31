@@ -6,7 +6,6 @@ meta:
     amp: true
 
 data:
-    size: 96 # 96 or 224
     path: 'data/vww96'
     batch: 256
     num_workers: 4

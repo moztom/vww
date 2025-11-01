@@ -1,6 +1,6 @@
 meta:
     name: 'student_mbv3s_vww96_kd_refine'
-    seed: 42
+    seed: 35
     out_dir: 'runs'
     device: 'auto'
     amp: true
@@ -21,8 +21,8 @@ model:
     pretrained: true
 
 train:
-    epochs: 20
-    early_stop_patience: 10
+    epochs: 10
+    early_stop_patience: 5
     grad_clip_norm: 2.0
     label_smoothing: 0.0
     save_full_checkpt: true
@@ -34,7 +34,7 @@ train:
     scheduler:
         name: 'onecycle'
         max_lr: 0.00007
-        pct_start: 0.15
+        pct_start: 0.3
         div_factor: 10.0
         final_div_factor: 1000.0
 

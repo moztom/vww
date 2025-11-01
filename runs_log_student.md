@@ -734,3 +734,18 @@ Try 20 epochs again but with onecycle configured properly:
 Run 4 - 2025-10-31_22-51-42_student_mbv3s_vww96_kd_refine
 20 epochs (pct_start: 0.3 -> 0.15) make warmup the same as 10 epoch run (3 epochs)
 acc - 0.8671
+Likely found the capacity of this.. longer onecycle tail doesn't buy generalisation.
+
+Last try a constant LR
+Run 5 - 2025-10-31_23-18-50_student_mbv3s_vww96_kd_refine
+10 epochs contant LR 0.00005
+acc - 0.8677
+nope.
+
+Different seeds on run 2:
+
+2025-10-31_23-27-34_student_mbv3s_vww96_kd_refine
+seed 43, acc - 0.8677
+
+2025-10-31_23-31-29_student_mbv3s_vww96_kd_refine
+seed 35, acc - 0.8660

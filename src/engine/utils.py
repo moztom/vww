@@ -1,26 +1,59 @@
+import os
 import random, time, platform, subprocess, json
 from pathlib import Path
+from typing import Dict, Optional
 import yaml
 
 import torch
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
+from thop import profile
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def set_seed(seed=42):
-    """ Set random seeds and deterministic pytorch for reproducibility """
-    random.seed(seed); np.random.seed(seed); torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
-    
-    # Faster, and reproducable on MPS (not strictly reproducible on CUDA)
-    torch.backends.cudnn.deterministic = False
-    torch.backends.cudnn.benchmark = True
+    """Set random seeds and make CUDA execution deterministic."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    info = {}
+
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+        # cuBLAS requires this environment variable for deterministic matmul
+        os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+        info["cublas_workspace_config"] = os.environ.get("CUBLAS_WORKSPACE_CONFIG")
+
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+        info["cudnn_benchmark"] = torch.backends.cudnn.benchmark
+        info["cudnn_deterministic"] = torch.backends.cudnn.deterministic
+
+        # Disable TF32 to avoid reduced-precision nondeterminism
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
+        info["allow_tf32_matmul"] = torch.backends.cuda.matmul.allow_tf32
+        info["allow_tf32_cudnn"] = torch.backends.cudnn.allow_tf32
+
+        # Enforce deterministic kernels; raises if an op lacks a deterministic path
+        torch.use_deterministic_algorithms(True)
+        info["deterministic_algorithms"] = True
+    else:
+        if hasattr(torch.backends, "cudnn") and torch.backends.cudnn.is_available():
+            torch.backends.cudnn.benchmark = False
+            torch.backends.cudnn.deterministic = True
+            info["cudnn_benchmark"] = torch.backends.cudnn.benchmark
+            info["cudnn_deterministic"] = torch.backends.cudnn.deterministic
+
+    return info
 
 
-def init_logging(config: dict, device: str):
-    """ Create a new run directory with timestamp, save config and system info """
+def init_logging(config: dict, device: str, seed: int, determinism: Optional[Dict[str, object]] = None):
+    """Create a new run directory with timestamp, save config, determinism info, and system details."""
 
     # Check runs directory exists
     (REPO_ROOT / "runs").mkdir(exist_ok=True)
@@ -41,10 +74,13 @@ def init_logging(config: dict, device: str):
         "cuda_name": torch.cuda.get_device_name(0) if device == "cuda" and torch.cuda.is_available() else "NA",
         "platform": platform.platform(),
         "cpu": platform.processor(),
-        "seed": 42,
+        "seed": seed,
         "git_commit": _try_cmd(["git", "rev-parse", "--short", "HEAD"]),
         "start_time": run_id
     }
+    if determinism:
+        for key, value in determinism.items():
+            sysinfo[f"determinism.{key}"] = value
     with open(run_dir / "system.txt", "w") as file:
         for k, v in sysinfo.items():
             file.write(f"{k}: {v}\n")
@@ -106,34 +142,54 @@ def log_epoch(
             }) + "\n")
 
 
-def save_checkpt(output_path, epoch, model, va_acc, save_full_checkpt, *, optimizer, scheduler, scaler, va_loss):
-    """ Save model checkpoint """
-
-    if save_full_checkpt:
-        to_save = {
-            "epoch": epoch,
-            "model": model.state_dict(),
-            "optimizer": optimizer.state_dict(),
-            "scheduler": scheduler.state_dict(),
-            "scaler": scaler.state_dict() if scaler else None,
-            "va_acc": va_acc,
-            "va_loss": va_loss,
-        }
-    else:
-        to_save = {
-            "epoch": epoch,
-            "model": model.state_dict(),
-            "va_acc": va_acc
-        }
-
-    torch.save(
-        to_save,
-        output_path,
-    )
-
-
 def _try_cmd(cmd):
     try:
         return subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode().strip()
     except Exception:
         return "NA"
+
+
+def _peek_example(loader) -> Optional[torch.Tensor]:
+    """ Return a single example tensor from a DataLoader on CPU """
+
+    iterator = iter(loader)
+    try:
+        batch = next(iterator)
+    except StopIteration:
+        return None
+
+    example = batch[0] if isinstance(batch, (tuple, list)) else batch
+    if not isinstance(example, torch.Tensor):
+        return None
+
+    return example[:1].detach()
+
+
+def compute_model_complexity(
+    model: torch.nn.Module,
+    loader=None,
+) -> Optional[Dict[str, int]]:
+    """ Compute parameter count and MACs for a model """
+
+    example_input = _peek_example(loader)
+
+    if example_input is None:
+        return None
+
+    example_input = example_input.to("cpu")
+
+    try:
+        model.to("cpu")
+        model.eval()
+        with torch.no_grad():
+            macs, params = profile(model, inputs=(example_input,), verbose=False)
+    except Exception:
+        return None
+
+    try:
+        params = int(params)
+        macs = int(macs)
+    except (TypeError, ValueError):
+        return None
+
+    return {"param_count": params, "macs": macs}

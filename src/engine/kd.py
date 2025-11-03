@@ -55,8 +55,6 @@ def kd_train_one_epoch(
     device,
     optimizer,
     scheduler,
-    scaler,
-    autocast,
     alpha,
     T,
     grad_clip_norm,
@@ -89,32 +87,23 @@ def kd_train_one_epoch(
             teacher_logits = teacher(t_in)
         
         # Forward
-        with autocast:
-            student_logits = student(imgs)
-            loss, ce_loss, kl_loss, margin_loss = kd_loss(
-                student_logits,
-                teacher_logits,
-                labels,
-                alpha,
-                T,
-                label_smoothing,
-                confidence_gamma,
-                margin_weight,
-            )
+        student_logits = student(imgs)
+        loss, ce_loss, kl_loss, margin_loss = kd_loss(
+            student_logits,
+            teacher_logits,
+            labels,
+            alpha,
+            T,
+            label_smoothing,
+            confidence_gamma,
+            margin_weight,
+        )
 
         # Backward
-        if scaler: # CUDA
-            scaler.scale(loss).backward()
-            if grad_clip_norm and grad_clip_norm > 0:
-                scaler.unscale_(optimizer)
-                clip_grad_norm_(student.parameters(), grad_clip_norm)
-            scaler.step(optimizer)
-            scaler.update()
-        else: # MPS and CPU
-            loss.backward()
-            if grad_clip_norm and grad_clip_norm > 0:
-                clip_grad_norm_(student.parameters(), grad_clip_norm)
-            optimizer.step()
+        loss.backward()
+        if grad_clip_norm and grad_clip_norm > 0:
+            clip_grad_norm_(student.parameters(), grad_clip_norm)
+        optimizer.step()
 
         if scheduler:
             scheduler.step()

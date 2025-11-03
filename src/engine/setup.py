@@ -19,8 +19,8 @@ def build_context(config_path: Path, stage: str = None):
     # load config
     config = _load_config(config_path)
 
-    # seed
-    set_seed(config["meta"].get("seed", 42))
+    # seed and determinism
+    determinism = set_seed(config["meta"]["seed"])
 
     # device
     device = _pick_device(config["meta"].get("device", "auto"))
@@ -40,16 +40,11 @@ def build_context(config_path: Path, stage: str = None):
     # model
     model = build_model(config["model"]["type"], config["model"]["pretrained"]).to(device)
 
+    # load initial checkpoint (if specified)
     init_checkpoint = config["train"].get("init_checkpoint")
     if init_checkpoint:
-        checkpoint_path = Path(init_checkpoint)
-        ckpt = torch.load(checkpoint_path, map_location="cpu")
-        state_dict = ckpt.get("model", ckpt)
-        missing, unexpected = model.load_state_dict(state_dict, strict=False)
-        if missing or unexpected:
-            print(
-                f"[build_context] Loaded init checkpoint {checkpoint_path} with missing={missing} unexpected={unexpected}"
-            )
+        checkpt = torch.load(Path(init_checkpoint), map_location="cpu")
+        model.load_state_dict(checkpt)
 
     # criterion/loss
     criterion = CrossEntropyLoss(
@@ -67,13 +62,7 @@ def build_context(config_path: Path, stage: str = None):
     scheduler = _make_scheduler(config, optimizer, tr_loader)
 
     # logging / run dir
-    run_dir, writer = init_logging(config, device)
-
-    # AMP (disabled for mps due to gradient underflow with float16 autocast)
-    use_amp = config["meta"]["amp"] and (device != "mps")
-    scaler = GradScaler() if use_amp and (device == "cuda") else None
-    autocast = torch.autocast(device_type=device) if use_amp else nullcontext()
-    # NEEDS TO BE DIFFERENT FOR INFERENCE
+    run_dir, writer = init_logging(config, device, config["meta"]["seed"], determinism)
 
     context = {
         "device": device,
@@ -85,8 +74,6 @@ def build_context(config_path: Path, stage: str = None):
         "scheduler": scheduler,
         "run_dir": run_dir,
         "writer": writer,
-        "scaler": scaler,
-        "autocast": autocast,
         "max_patience": config["train"]["early_stop_patience"],
         "epochs": config["train"]["epochs"],
         "grad_clip_norm": config["train"].get("grad_clip_norm", 0.0),
@@ -95,12 +82,13 @@ def build_context(config_path: Path, stage: str = None):
         "ema_decay": config["train"].get("ema_decay"),
         "bn_recalibrate_epoch": config["train"].get("bn_recalibrate_epoch"),
         "bn_recalibrate_max_batches": config["train"].get("bn_recalibrate_max_batches"),
+        "determinism": determinism,
     }
 
     if stage == "kd":
         teacher = build_model(config["kd"]["teacher"]["arch"], config["kd"]["teacher"]["pretrained"])
         checkpt = torch.load(config["kd"]["teacher"]["checkpt"], map_location="cpu")
-        teacher.load_state_dict(checkpt["model"])
+        teacher.load_state_dict(checkpt)
         teacher.to(device)
         teacher.eval()
 

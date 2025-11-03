@@ -7,7 +7,7 @@ from sklearn.metrics import confusion_matrix, classification_report
 
 from src.engine.setup import build_context
 from src.engine.train_loops import train_one_epoch, evaluate
-from src.engine.utils import log_epoch, save_checkpt
+from src.engine.utils import log_epoch, compute_model_complexity
 from src.engine.ema import ModelEMA
 from src.engine.finetune_utils import set_backbone_trainable, recalibrate_batch_norm
 
@@ -28,7 +28,6 @@ def main():
 
     best_acc = 0.0
     best_epoch = 0
-    output_path = ctx["run_dir"] / "model.pt"
     patience = 0
     overall_start = time.perf_counter()
     ema = None
@@ -101,16 +100,9 @@ def main():
             best_epoch = epoch
             patience = 0
 
-            save_checkpt(
-                output_path,
-                epoch,
-                model_for_eval,
-                va_acc,
-                ctx["save_full_checkpt"],
-                optimizer=ctx["optimizer"],
-                scheduler=ctx["scheduler"],
-                scaler=ctx["scaler"],
-                va_loss=va_loss,
+            torch.save(
+                model_for_eval.state_dict(),
+                ctx["run_dir"] / "model.pt"
             )
 
         else:
@@ -133,7 +125,7 @@ def main():
     )
     print("\nVALIDATION SUMMARY")
     print(
-        f"\nBest checkpoint: val acc = {best_acc:.4f} (epoch {best_epoch}) ({output_path})"
+        f"\nBest checkpoint: val acc = {best_acc:.4f} (epoch {best_epoch}) ({ctx["run_dir"] / "model.pt"})"
     )
     print(f"Total training time: {total_elapsed/60:.1f}mins ({total_elapsed:.1f}s)")
 
@@ -156,6 +148,16 @@ def main():
     print(classification_report(gts, preds, labels=labels, target_names=target_names))
     # ---------------------
 
+    complexity = compute_model_complexity(final_model, ctx["val_loader"])
+    param_count = macs = None
+    if complexity:
+        param_count = complexity["param_count"]
+        macs = complexity["macs"]
+        print(
+            f"\nModel complexity: params={param_count:,} ({param_count/1e6:.2f}M) | "
+            f"MACs={macs:,} ({macs/1e6:.2f}M)"
+        )
+
     # Save final metrics to metrics.jsonl
     with open(ctx["run_dir"] / "metrics.jsonl", "a") as f:
         f.write(
@@ -164,6 +166,8 @@ def main():
                     "best_epoch": best_epoch,
                     "best_val_acc": best_acc,
                     "total_train_time": total_elapsed,
+                    "model_param_count": param_count,
+                    "model_macs": macs,
                 }
             )
             + "\n"

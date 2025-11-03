@@ -14,8 +14,6 @@ def train_one_epoch(
     optimizer,
     criterion,
     scheduler,
-    scaler,
-    autocast,
     grad_clip_norm,
     ema=None,
 ):
@@ -37,23 +35,14 @@ def train_one_epoch(
         optimizer.zero_grad(set_to_none=True)
 
         # Forward
-        with autocast:
-            logits = model(imgs)  # forward pass
-            loss = criterion(logits, labels)  # loss computed
+        logits = model(imgs)  # forward pass
+        loss = criterion(logits, labels)  # loss computed
 
         # Backward
-        if scaler: # CUDA
-            scaler.scale(loss).backward()  # backward pass with loss scaling
-            if grad_clip_norm and grad_clip_norm > 0:
-                scaler.unscale_(optimizer)
-                clip_grad_norm_(model.parameters(), grad_clip_norm) # clip grad norms
-            scaler.step(optimizer)  # optimizer step
-            scaler.update()  # update scaler for next iteration
-        else: # MPS and CPU
-            loss.backward()  # backward pass
-            if grad_clip_norm and grad_clip_norm > 0:
-                clip_grad_norm_(model.parameters(), grad_clip_norm) # clip grad norms
-            optimizer.step()  # optimizer step
+        loss.backward()  # backward pass
+        if grad_clip_norm and grad_clip_norm > 0:
+            clip_grad_norm_(model.parameters(), grad_clip_norm) # clip grad norms
+        optimizer.step()  # optimizer step
 
         if scheduler:
             scheduler.step()
@@ -72,7 +61,7 @@ def train_one_epoch(
 
 
 @torch.no_grad()
-def evaluate(model, loader, device, metrics=False, teacher=False):
+def evaluate(model, loader, device, metrics=False, teacher_224=False):
     """Evaluate the model on the validation set"""
 
     model.eval()
@@ -84,11 +73,10 @@ def evaluate(model, loader, device, metrics=False, teacher=False):
     for imgs, labels in loader:
 
         # Transfer images/labels to device (GPU/CPU/MPS)
-        imgs, labels = imgs.to(device, non_blocking=nonblock), labels.to(
-            device, non_blocking=nonblock
-        )
+        imgs = imgs.to(device, non_blocking=nonblock)
+        labels = labels.to(device, non_blocking=nonblock)
 
-        if teacher:
+        if teacher_224:
             imgs = F.interpolate(imgs, size=224, mode='bilinear', align_corners=False)
 
         logits = model(imgs)  # forward pass

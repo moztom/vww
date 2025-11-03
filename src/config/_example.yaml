@@ -3,7 +3,6 @@ meta:
     seed: 42
     out_dir: 'runs'
     device: 'auto' # auto|cuda|mps|cpu
-    amp: true
 
 data:
     path: 'data/vww96'
@@ -26,7 +25,6 @@ train:
     label_smoothing: 0.05
     early_stop_patience: 5
     grad_clip_norm: 2.0
-    save_full_checkpt: false
     optimizer:
         name: 'adamw'
         lr: 0.001

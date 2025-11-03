@@ -3,7 +3,6 @@ meta:
     seed: 42
     out_dir: 'runs'
     device: 'auto'
-    amp: true
 
 data:
     path: 'data/vww224'
@@ -25,7 +24,6 @@ train:
     label_smoothing: 0.01
     early_stop_patience: 8
     grad_clip_norm: 0.0
-    save_full_checkpt: true
     freeze_backbone_epochs: 2
     ema_decay: 0.999
     optimizer:

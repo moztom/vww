@@ -56,8 +56,6 @@ def main():
             ctx["optimizer"],
             ctx["criterion"],
             ctx["scheduler"],
-            ctx["scaler"],
-            ctx["autocast"],
             ctx["grad_clip_norm"],
             ema=ema,
         )
@@ -125,7 +123,7 @@ def main():
     )
     print("\nVALIDATION SUMMARY")
     print(
-        f"\nBest checkpoint: val acc = {best_acc:.4f} (epoch {best_epoch}) ({ctx["run_dir"] / "model.pt"})"
+        f"\nBest checkpoint: val acc = {best_acc:.4f} (epoch {best_epoch}) ({ctx['run_dir'] / 'model.pt'})"
     )
     print(f"Total training time: {total_elapsed/60:.1f}mins ({total_elapsed:.1f}s)")
 

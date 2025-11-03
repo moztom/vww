@@ -120,8 +120,6 @@ def main():
             ctx["device"],
             ctx["optimizer"],
             ctx["scheduler"],
-            ctx["scaler"],
-            ctx["autocast"],
             epoch_alpha,
             ctx["kd_temp"],
             ctx["grad_clip_norm"],

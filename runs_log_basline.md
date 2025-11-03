@@ -562,3 +562,37 @@ person recall: 0.83
  [ 633 3167]]
 
 ---
+
+(on PC)
+**Run:** (17) 2025-11-03_22-00-04_baseline_mbv3s_vww96
+
+**Goal:** Re-run with CUDA determinism, and with MACs/params count
+
+**Change vs prev:**
+no change
+
+**Config:**
+96×96
+bs=256
+30 epochs
+lr=0.0007
+Optimiser: AdamW - weight_decay=1e-4
+Loss fcn: CrossEntropyLoss - label_smoothing=0.05
+scheduler: OneCycleLR - max_lr=0.0007, pct_start=0.05, div_factor=20.0, final_div_factor=1000, anneal_strategy="cos"
+seed=42
+
+**Data:**
+Imagenet mean/std normalization
+RandomHorizontalFlip (p=0.5)
+ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.0)
+RandomErasing(p=0.0, scale=(0.02, 0.12), ratio=(0.3, 3.3))
+
+**Result:**
+val_acc=
+
+no person recall:
+person recall:
+
+**Confusion highlights:**
+
+---

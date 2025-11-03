@@ -3,7 +3,6 @@ meta:
     seed: 42
     out_dir: 'runs'
     device: 'auto' # auto|cuda|mps|cpu
-    amp: true
 
 data:
     path: 'data/vww96'
@@ -25,7 +24,6 @@ train:
     label_smoothing: 0.02
     early_stop_patience: 4
     grad_clip_norm: 0.0
-    save_full_checkpt: true
     init_checkpoint: 'runs/2025-10-24_21-17-59_teacher_mbv3l_vww244/model.pt'
     optimizer:
         name: 'adamw'

@@ -3,7 +3,6 @@ meta:
     seed: 35
     out_dir: 'runs'
     device: 'auto'
-    amp: true
 
 data:
     path: 'data/vww96'
@@ -25,7 +24,6 @@ train:
     early_stop_patience: 5
     grad_clip_norm: 2.0
     label_smoothing: 0.0
-    save_full_checkpt: true
     init_checkpoint: 'saved_runs/2025-10-27_21-51-06_student_mbv3s_vww96/model.pt'
     optimizer:
         name: 'adamw'

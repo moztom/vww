@@ -1,12 +1,10 @@
 from pathlib import Path
 import yaml
-from contextlib import nullcontext
 
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import OneCycleLR
-from torch.amp import GradScaler
 
 from src.engine.utils import set_seed, init_logging
 from src.data import build_dataloaders
@@ -77,12 +75,10 @@ def build_context(config_path: Path, stage: str = None):
         "max_patience": config["train"]["early_stop_patience"],
         "epochs": config["train"]["epochs"],
         "grad_clip_norm": config["train"].get("grad_clip_norm", 0.0),
-        "save_full_checkpt": config["train"]["save_full_checkpt"],
         "freeze_backbone_epochs": config["train"].get("freeze_backbone_epochs", 0),
         "ema_decay": config["train"].get("ema_decay"),
         "bn_recalibrate_epoch": config["train"].get("bn_recalibrate_epoch"),
         "bn_recalibrate_max_batches": config["train"].get("bn_recalibrate_max_batches"),
-        "determinism": determinism,
     }
 
     if stage == "kd":

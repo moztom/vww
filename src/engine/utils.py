@@ -64,7 +64,7 @@ def init_logging(config: dict, device: str, seed: int, determinism: Optional[Dic
 
     # Save config
     with open(run_dir / "config.yaml", "w") as file:
-        yaml.safe_dump(config, file)
+        yaml.safe_dump(config, file, sort_keys=False)
 
     # Save system info
     sysinfo = {

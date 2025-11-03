@@ -588,11 +588,13 @@ ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.0)
 RandomErasing(p=0.0, scale=(0.02, 0.12), ratio=(0.3, 3.3))
 
 **Result:**
-val_acc=
+val_acc= 0.8523 (epoch 18)
 
-no person recall:
-person recall:
+no person recall: 0.87
+person recall: 0.83
 
 **Confusion highlights:**
+[[3702  557]
+ [ 649 3151]]
 
 ---

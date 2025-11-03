@@ -1,0 +1,50 @@
+data:
+  aug:
+    color_jitter:
+    - 0.2
+    - 0.2
+    - 0.2
+    - 0.0
+    rand_hflip: 0.5
+    random_erasing:
+    - 0.0
+    - 0.02
+    - 0.12
+    - 0.3
+    - 3.3
+  batch: 256
+  mean:
+  - 0.485
+  - 0.456
+  - 0.406
+  num_workers: 4
+  path: data/vww96
+  std:
+  - 0.229
+  - 0.224
+  - 0.225
+meta:
+  amp: true
+  device: auto
+  name: baseline_mbv3s_vww96
+  out_dir: runs
+  seed: 42
+model:
+  pretrained: true
+  type: mobilenet_v3_small
+train:
+  early_stop_patience: 8
+  epochs: 30
+  grad_clip_norm: 2.0
+  label_smoothing: 0.05
+  optimizer:
+    lr: 0.0007
+    name: adamw
+    weight_decay: 0.0001
+  save_full_checkpt: false
+  scheduler:
+    div_factor: 20.0
+    final_div_factor: 10000.0
+    max_lr: 0.0007
+    name: onecycle
+    pct_start: 0.05

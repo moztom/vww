@@ -25,7 +25,7 @@ def set_seed(seed=42):
         torch.cuda.manual_seed_all(seed)
 
         # cuBLAS requires this environment variable for deterministic matmul
-        os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+        os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":16:8")
         info["cublas_workspace_config"] = os.environ.get("CUBLAS_WORKSPACE_CONFIG")
 
         torch.backends.cudnn.benchmark = False

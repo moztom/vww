@@ -117,7 +117,17 @@ def main():
     total_elapsed = time.perf_counter() - overall_start
 
     # Final metrics -----
+
+    # Reload the best checkpoint before computing final metrics to ensure
     final_model = ema.ema_model if ema else ctx["model"]
+    try:
+        best_ckpt_path = ctx["run_dir"] / "model.pt"
+        checkpt = torch.load(best_ckpt_path, map_location="cpu")
+        final_model.load_state_dict(checkpt, strict=True)
+    except Exception:
+        # If loading fails, fall back to current in-memory weights
+        pass
+
     va_loss, va_acc, preds, gts = evaluate(
         final_model, ctx["val_loader"], ctx["device"], metrics=True
     )
@@ -144,6 +154,7 @@ def main():
 
     print("\nClassification report:")
     print(classification_report(gts, preds, labels=labels, target_names=target_names))
+    
     # ---------------------
 
     complexity = compute_model_complexity(final_model, ctx["val_loader"])

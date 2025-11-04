@@ -564,7 +564,7 @@ person recall: 0.83
 ---
 
 (on PC)
-**Run:** (17) 2025-11-03_22-00-04_baseline_mbv3s_vww96
+**Run:** (17) 2025-11-04_17-28-09_baseline_mbv3s_vww96
 
 **Goal:** Re-run with CUDA determinism, and with MACs/params count
 
@@ -588,7 +588,7 @@ ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.0)
 RandomErasing(p=0.0, scale=(0.02, 0.12), ratio=(0.3, 3.3))
 
 **Result:**
-val_acc= 0.8523 (epoch 18)
+val_acc= 0.8517 (epoch 7)
 
 no person recall: 0.87
 person recall: 0.83

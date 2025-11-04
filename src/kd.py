@@ -178,6 +178,16 @@ def main():
     total_elapsed = time.perf_counter() - overall_start
 
     # Final metrics ----------
+    
+    # Reload the best checkpoint before computing final metrics to align
+    try:
+        best_ckpt_path = ctx["run_dir"] / "model.pt"
+        checkpt = torch.load(best_ckpt_path, map_location="cpu")
+        ctx["model"].load_state_dict(checkpt, strict=True)
+    except Exception:
+        # If loading fails, evaluate with current in-memory weights
+        pass
+
     va_loss, va_acc, preds, gts = evaluate(
         ctx["model"], ctx["val_loader"], ctx["device"], metrics=True
     )

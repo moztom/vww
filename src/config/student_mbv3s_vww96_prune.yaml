@@ -1,0 +1,74 @@
+meta:
+    name: 'student_mbv3s_vww96_prune'
+    seed: 35
+    out_dir: 'runs'
+    device: 'auto'
+
+data:
+    path: 'data/vww96'
+    batch: 256
+    num_workers: 4
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+    aug:
+        rand_hflip: 0.5
+        color_jitter: [0.2, 0.2, 0.2, 0.0]
+        random_erasing: [0.0, 0.02, 0.12, 0.3, 3.3]
+
+model:
+    type: 'mobilenet_v3_small'
+    pretrained: true
+
+train:
+    epochs: 10
+    early_stop_patience: 5
+    grad_clip_norm: 2.0
+    label_smoothing: 0.0
+    init_checkpoint: 'saved_runs/2025-10-31_21-20-46_student_mbv3s_vww96_kd_refine/model.pt'
+    optimizer:
+        name: 'adamw'
+        lr: 0.00007
+        weight_decay: 0.0001
+    scheduler:
+        name: 'onecycle'
+        max_lr: 0.00007
+        pct_start: 0.3
+        div_factor: 10.0
+        final_div_factor: 1000.0
+
+kd:
+    teacher:
+        arch: 'mobilenet_v3_large'
+        pretrained: true
+        checkpt: 'saved_runs/2025-10-26_17-53-08_teacher_mbv3l_vww96/model.pt'
+    alpha: 0.55
+    alpha_constant: true
+    temperature: 3.0
+    teacher_input_size: 96
+    label_smoothing: 0.0
+    confidence_gamma: 0.0
+    margin_weight: 0.0
+
+prune:
+    strategy: 'global'
+    importance: 'bn_gamma' # "bn_gamma" or "l1_norm"
+    expand_only: true
+    targets: [0.10, 0.20, 0.30]
+    protect:
+        block_min_channels: 16
+        skip_first_n: 1
+        keep_block_indices: []
+    finetune:
+        use_kd: true
+        epochs: 4
+        lr: 0.0001
+        lr_high: 0.00005
+        lr_high_threshold: 0.25
+        weight_decay: 0.00001
+        patience: 2
+        bn_recalibrate_loader: val
+        bn_recalibrate_batches: 32
+    grad_clip_norm: 2.0
+    acceptance:
+        baseline_accuracy: 0.8562
+        max_drop_after_step: 0.015

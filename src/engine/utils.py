@@ -25,7 +25,7 @@ def set_seed(seed=42):
         torch.cuda.manual_seed_all(seed)
 
         # cuBLAS requires this environment variable for deterministic matmul
-        os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":16:8")
+        os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
         info["cublas_workspace_config"] = os.environ.get("CUBLAS_WORKSPACE_CONFIG")
 
         torch.backends.cudnn.benchmark = False
@@ -33,15 +33,6 @@ def set_seed(seed=42):
         info["cudnn_benchmark"] = torch.backends.cudnn.benchmark
         info["cudnn_deterministic"] = torch.backends.cudnn.deterministic
 
-        # Disable TF32 to avoid reduced-precision nondeterminism
-        torch.backends.cuda.matmul.allow_tf32 = False
-        torch.backends.cudnn.allow_tf32 = False
-        info["allow_tf32_matmul"] = torch.backends.cuda.matmul.allow_tf32
-        info["allow_tf32_cudnn"] = torch.backends.cudnn.allow_tf32
-
-        # Enforce deterministic kernels; raises if an op lacks a deterministic path
-        torch.use_deterministic_algorithms(True)
-        info["deterministic_algorithms"] = True
     else:
         if hasattr(torch.backends, "cudnn") and torch.backends.cudnn.is_available():
             torch.backends.cudnn.benchmark = False

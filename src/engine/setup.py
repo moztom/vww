@@ -7,60 +7,61 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import OneCycleLR
 
 from src.engine.utils import set_seed, init_logging
-from src.data import build_dataloaders
-from src.models import build_model
+from src.engine.data import build_dataloaders
+from src.engine.models import build_model
 
 
 def build_context(config_path: Path, stage: str = None):
     """Build training context from config file"""
 
     # load config
-    config = _load_config(config_path)
+    cfg = _load_config(config_path)
 
     # seed and determinism
-    determinism = set_seed(config["meta"]["seed"])
+    determinism = set_seed(cfg["meta"]["seed"])
 
     # device
-    device = _pick_device(config["meta"].get("device", "auto"))
+    device = _pick_device(cfg["meta"].get("device", "auto"))
 
     # data
     tr_loader, val_loader, class_weight_tensor = build_dataloaders(
-        data_path=Path(config["data"]["path"]),
-        batch_size=config["data"]["batch"],
-        num_workers=config["data"]["num_workers"],
-        mean=config["data"]["mean"],
-        std=config["data"]["std"],
-        rhf=config["data"]["aug"]["rand_hflip"],
-        cj=config["data"]["aug"]["color_jitter"],
-        re=config["data"]["aug"]["random_erasing"],
+        data_path=Path(cfg["data"]["path"]),
+        batch_size=cfg["data"]["batch"],
+        num_workers=cfg["data"]["num_workers"],
+        mean=cfg["data"]["mean"],
+        std=cfg["data"]["std"],
+        rhf=cfg["data"]["aug"]["rand_hflip"],
+        cj=cfg["data"]["aug"]["color_jitter"],
+        re=cfg["data"]["aug"]["random_erasing"],
     )
 
     # model
-    model = build_model(config["model"]["type"], config["model"]["pretrained"]).to(device)
+    model = build_model(cfg["model"]["type"], cfg["model"]["pretrained"]).to(device)
 
     # load initial checkpoint (if specified)
-    init_checkpoint = config["train"].get("init_checkpoint")
+    init_checkpoint = cfg["train"].get("init_checkpoint")
     if init_checkpoint:
         checkpt = torch.load(Path(init_checkpoint), map_location="cpu")
+        checkpt = checkpt.get("model") # TEMPORARY remove when i retrain my models (to not contain full checkpoint)
         model.load_state_dict(checkpt)
 
     # criterion/loss
     criterion = CrossEntropyLoss(
         weight=class_weight_tensor.to(device) if class_weight_tensor else None,
-        label_smoothing=config["train"]["label_smoothing"],
+        label_smoothing=cfg["train"]["label_smoothing"],
     )
 
     # what is class_weight_tensor for?
     # It's for handling class imbalance in the dataset by assigning different weights to each class during loss
 
     # optimizer
-    optimizer = _make_optimizer(config, model)
+    optimizer = _make_optimizer(cfg, model)
 
     # scheduler
-    scheduler = _make_scheduler(config, optimizer, tr_loader)
+    scheduler = _make_scheduler(cfg, optimizer, tr_loader)
 
     # logging / run dir
-    run_dir, writer = init_logging(config, device, config["meta"]["seed"], determinism)
+    run_dir, writer = init_logging(cfg, device, cfg["meta"]["seed"], determinism)
 
     context = {
         "device": device,
@@ -72,33 +73,35 @@ def build_context(config_path: Path, stage: str = None):
         "scheduler": scheduler,
         "run_dir": run_dir,
         "writer": writer,
-        "max_patience": config["train"]["early_stop_patience"],
-        "epochs": config["train"]["epochs"],
-        "grad_clip_norm": config["train"].get("grad_clip_norm", 0.0),
-        "freeze_backbone_epochs": config["train"].get("freeze_backbone_epochs", 0),
-        "ema_decay": config["train"].get("ema_decay"),
-        "bn_recalibrate_epoch": config["train"].get("bn_recalibrate_epoch"),
-        "bn_recalibrate_max_batches": config["train"].get("bn_recalibrate_max_batches"),
+        "max_patience": cfg["train"]["early_stop_patience"],
+        "epochs": cfg["train"]["epochs"],
+        "grad_clip_norm": cfg["train"].get("grad_clip_norm", 0.0),
+        "freeze_backbone_epochs": cfg["train"].get("freeze_backbone_epochs", 0),
+        "ema_decay": cfg["train"].get("ema_decay"),
+        "bn_recalibrate_epoch": cfg["train"].get("bn_recalibrate_epoch"),
+        "bn_recalibrate_max_batches": cfg["train"].get("bn_recalibrate_max_batches"),
+        "config": cfg,
     }
 
-    if stage == "kd":
-        teacher = build_model(config["kd"]["teacher"]["arch"], config["kd"]["teacher"]["pretrained"])
-        checkpt = torch.load(config["kd"]["teacher"]["checkpt"], map_location="cpu")
+    if stage in ("kd", "prune"):
+        kd_cfg = cfg["kd"]
+        teacher_cfg = kd_cfg["teacher"]
+
+        teacher = build_model(teacher_cfg["arch"], teacher_cfg["pretrained"])
+        checkpt = torch.load(teacher_cfg["checkpt"], map_location="cpu")
+        checkpt = checkpt.get("model") # TEMPORARY remove when i retrain my models (to not contain full checkpoint)
         teacher.load_state_dict(checkpt)
         teacher.to(device)
         teacher.eval()
 
         for p in teacher.parameters():
             p.requires_grad_(False)
-        
-        # Optional KD alpha scheduling parameters
-        kd_cfg = config.get("kd", {})
+
         context.update({
             "teacher": teacher,
-            "kd_alpha": float(kd_cfg.get("alpha", 0.5)),
-            "kd_temp": float(kd_cfg.get("temperature", 4.0)),
-            # Optional scheduling controls (all optional)
-            # If absent, kd.py will fall back to sensible defaults.
+            "kd_alpha": float(cfg.get("alpha", 0.5)),
+            "kd_temp": float(cfg.get("temperature", 4.0)),
+            # Optional scheduling controls
             "kd_alpha_start": kd_cfg.get("alpha_start", None),
             "kd_alpha_end": kd_cfg.get("alpha_end", None),
             "kd_alpha_warmup_epochs": kd_cfg.get("alpha_warmup_epochs", None),
@@ -114,11 +117,10 @@ def build_context(config_path: Path, stage: str = None):
         })
 
     if stage == "prune":
-        pass
+        context["prune_cfg"] = cfg["prune"]
 
     if stage == "quant":
         pass
-
 
     return context
 
@@ -146,34 +148,34 @@ def _pick_device(name: str):
     return name
 
 
-def _make_optimizer(config, model):
+def _make_optimizer(cfg, model):
     """Create optimizer based on config"""
-    if config["train"]["optimizer"]["name"] == "adamw":
+    if cfg["train"]["optimizer"]["name"] == "adamw":
         optimizer = AdamW(
             params=model.parameters(),
-            lr=config["train"]["optimizer"]["lr"],
-            weight_decay=config["train"]["optimizer"]["weight_decay"],
+            lr=cfg["train"]["optimizer"]["lr"],
+            weight_decay=cfg["train"]["optimizer"]["weight_decay"],
         )
     else:
-        raise ValueError(f"Unknown optimizer {config['train']['optimizer']}")
+        raise ValueError(f"Unknown optimizer {cfg['train']['optimizer']}")
 
     return optimizer
 
 
-def _make_scheduler(config, optimizer, tr_loader):
+def _make_scheduler(cfg, optimizer, tr_loader):
     """Create scheduler based on config"""
-    if config["train"]["scheduler"]["name"] == "onecycle":
+    if cfg["train"]["scheduler"]["name"] == "onecycle":
         scheduler = OneCycleLR(
             optimizer=optimizer,
-            max_lr=config["train"]["scheduler"]["max_lr"],
-            epochs=config["train"]["epochs"],
+            max_lr=cfg["train"]["scheduler"]["max_lr"],
+            epochs=cfg["train"]["epochs"],
             steps_per_epoch=len(tr_loader),
-            pct_start=config["train"]["scheduler"]["pct_start"],
-            div_factor=config["train"]["scheduler"]["div_factor"],
-            final_div_factor=config["train"]["scheduler"]["final_div_factor"],
+            pct_start=cfg["train"]["scheduler"]["pct_start"],
+            div_factor=cfg["train"]["scheduler"]["div_factor"],
+            final_div_factor=cfg["train"]["scheduler"]["final_div_factor"],
             anneal_strategy="cos",
         )
     else:
-        raise ValueError(f"Unknown scheduler {config['train']['scheduler']}")
+        raise ValueError(f"Unknown scheduler {cfg['train']['scheduler']}")
 
     return scheduler

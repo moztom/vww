@@ -6,8 +6,8 @@ from sklearn.metrics import confusion_matrix, classification_report
 
 from src.engine.train_loops import evaluate
 from src.engine.utils import set_seed, compute_model_complexity
-from src.data import build_dataloaders
-from src.models import build_model
+from src.engine.data import build_dataloaders
+from src.engine.models import build_model
 
 
 def main():

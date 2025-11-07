@@ -20,9 +20,9 @@ model:
     pretrained: true
 
 train:
-    epochs: 30
+    epochs: 20
     label_smoothing: 0.05
-    early_stop_patience: 8
+    early_stop_patience: 5
     grad_clip_norm: 0.0
     optimizer:
         name: 'adamw'

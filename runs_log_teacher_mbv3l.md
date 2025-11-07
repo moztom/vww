@@ -200,3 +200,58 @@ no person recall: 0.90
 person recall: 0.86
 
 ---
+
+**Run:** (8) 2025-11-03_22-37-10_teacher_mbv3l_vww244
+
+(also see 2025-11-04_18-55-01_teacher_mbv3l_vww244)
+
+**Goal:** re-run 224 teacher with CUDA determinism, and with MACs/params count
+
+**Change vs prev:**
+this is 224 native, identical run to run 2 but with more patience (3 -> 5)
+
+**Config:**
+default pretrain (IMAGENET1K_V2)
+
+**Data:**
+Imagenet mean/std normalization
+RandomHorizontalFlip
+ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.0)
+RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3))
+
+**Result:**
+val_acc= 0.9425 (epoch 10)
+
+no person recall: 0.97
+person recall: 0.91
+
+**Confusion highlights:**
+[[4137  122]
+ [ 341 3459]]
+
+---
+
+**Run:** (9)
+
+**Goal:** Squeeze more performance
+
+**Change vs prev:**
+
+**Config:**
+default pretrain (IMAGENET1K_V2)
+
+**Data:**
+Imagenet mean/std normalization
+RandomHorizontalFlip
+ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.0)
+RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3))
+
+**Result:**
+val_acc=
+
+no person recall:
+person recall:
+
+**Confusion highlights:**
+
+---

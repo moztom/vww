@@ -53,19 +53,19 @@ prune:
     strategy: 'global'
     importance: 'bn_gamma' # "bn_gamma" or "l1_norm"
     expand_only: true
-    targets: [0.10, 0.20, 0.30]
+    targets: [0.10, 0.15, 0.20, 0.25, 0.30]
     protect:
         block_min_channels: 16
         skip_first_n: 1
         keep_block_indices: []
     finetune:
         use_kd: true
-        epochs: 4
+        epochs: 10
         lr: 0.0001
         lr_high: 0.00005
         lr_high_threshold: 0.25
         weight_decay: 0.00001
-        patience: 2
+        patience: 4
         bn_recalibrate_loader: val
         bn_recalibrate_batches: 32
     grad_clip_norm: 2.0

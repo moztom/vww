@@ -99,8 +99,8 @@ def build_context(config_path: Path, stage: str = None):
 
         context.update({
             "teacher": teacher,
-            "kd_alpha": float(cfg.get("alpha", 0.5)),
-            "kd_temp": float(cfg.get("temperature", 4.0)),
+            "kd_alpha": float(kd_cfg.get("alpha", 0.5)),
+            "kd_temp": float(kd_cfg.get("temperature", 4.0)),
             # Optional scheduling controls
             "kd_alpha_start": kd_cfg.get("alpha_start", None),
             "kd_alpha_end": kd_cfg.get("alpha_end", None),

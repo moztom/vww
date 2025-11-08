@@ -42,7 +42,8 @@ def build_context(config_path: Path, stage: str = None):
     init_checkpoint = cfg["train"].get("init_checkpoint")
     if init_checkpoint:
         checkpt = torch.load(Path(init_checkpoint), map_location="cpu")
-        checkpt = checkpt.get("model") # TEMPORARY remove when i retrain my models (to not contain full checkpoint)
+        if isinstance(checkpt, dict) and "model" in checkpt:
+            checkpt = checkpt["model"]
         model.load_state_dict(checkpt)
 
     # criterion/loss
@@ -89,7 +90,8 @@ def build_context(config_path: Path, stage: str = None):
 
         teacher = build_model(teacher_cfg["arch"], teacher_cfg["pretrained"])
         checkpt = torch.load(teacher_cfg["checkpt"], map_location="cpu")
-        checkpt = checkpt.get("model") # TEMPORARY remove when i retrain my models (to not contain full checkpoint)
+        if isinstance(checkpt, dict) and "model" in checkpt:
+            checkpt = checkpt["model"]
         teacher.load_state_dict(checkpt)
         teacher.to(device)
         teacher.eval()

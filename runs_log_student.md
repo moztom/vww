@@ -749,3 +749,43 @@ seed 43, acc - 0.8677
 
 2025-10-31_23-31-29_student_mbv3s_vww96_kd_refine
 seed 35, acc - 0.8660
+
+---
+
+(on PC)
+**Run:** (xx) 2025-11-08_21-23-26_student_mbv3s_vww96
+
+**Goal:** Try 0.05 label smoothing (on ce in kd loss function) rather than 0
+
+**Change vs prev:**
+Same config as run 17 but with label smoothing (on ce) at 0.05.
+
+**Config:**
+kd:
+teacher:
+checkpt: 'saved_runs\2025-10-26_17-53-08_teacher_mbv3l_vww96\model.pt'
+arch: 'mobilenet_v3_large'
+pretrained: true
+alpha: 0.55
+alpha_constant: true
+temperature: 2.0
+teacher_input_size: 96
+label_smoothing: 0.05
+confidence_gamma: 2.0
+margin_weight: 0.03
+margin_weight_start:
+margin_weight_end:
+margin_weight_decay_end_epoch:
+
+**Result:**
+val_acc= 0.8680 (epoch 22)
+no person recall: 0.88
+person recall: 0.86
+
+Same exact result as run 17 but more stable at end, so better.
+
+**Confusion highlights:**
+[[3793  466]
+ [ 598 3202]]
+
+---

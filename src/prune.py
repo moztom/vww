@@ -141,7 +141,7 @@ def run_pruning(args: argparse.Namespace) -> None:
             print("No additional channels to prune for this target; skipping.")
             continue
 
-        print(f"Removing {to_remove} channels (cumulative fraction {_format_fraction(pruner.current_fraction())})")
+        print(f"Removing {to_remove} channels (cumulative fraction before removal: {_format_fraction(pruner.current_fraction())})")
         plan_per_block = pruner.apply(plan)
         cumulative = pruner.current_fraction()
         print(f"Cumulative removed fraction: {_format_fraction(cumulative)}")
@@ -263,6 +263,19 @@ def run_pruning(args: argparse.Namespace) -> None:
             )
 
         complexity = compute_model_complexity(model, ctx["val_loader"])
+        params = complexity["param_count"]
+        macs = complexity["macs"]
+        print(
+            f"Step complexity: params={params:,} ({params/1e6:.2f}M) | "
+            f"MACs={macs:,} ({macs/1e6:.2f}M)"
+        )
+
+        with open(run_dir / "metrics.jsonl", "a") as file:
+            file.write(json.dumps({
+                "Step params": f"{params:,} ({params/1e6:.2f}M)",
+                "Step MACs": f"{macs:,} ({macs/1e6:.2f}M)"
+            }) + "\n")
+
         model.to(device)
 
         summary = {

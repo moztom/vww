@@ -48,17 +48,86 @@ Could try lower lr_high_threshold (maybe 0.2) if recovery starts to jitter. This
 ---
 
 (On PC)
-**Run:** (2)
+**Run:** (2) 2025-11-08_16-02-58_student_mbv3s_vww96_prune
 
 **Goal:** more fine-tune time since there seems to be more headroom
 
 **Change vs prev:**
 More fine-tuning epochs (4->10)
 Also fixed a bug where the alpha and temp were not retrieved correctly so prev run was with a=0.5 and t=4. This run should use the correct a=0.55 and t=3
+Also changed to newly trained baseline accuracy 0.8517 (from 0.8562)
 
 **Config:**
 see config.yaml
 
 **Result:**
+10.00% 0.8608
+15.00% 0.8561
+20.00% 0.8523
+25.00% 0.8479
+
+**Analysis:**
+distillation strength (a=0.55) seems to have hurt performance at 20% compare to run 1
+20%-25% too big of a jump.
+
+---
+
+(On PC)
+**Run:** (3) 2025-11-08_17-51-57_student_mbv3s_vww96_prune
+
+**Goal:** tune params to recovery better and try lower target steps (to reduce single step shock)
+
+**Change vs prev:**
+alpha = 0.5, t = 4 (from 0.55,3)
+lr: 0.00007 (from 0.0001)
+lr_high: 0.00003 (from 0.00005)
+lr_high_threshold: 0.21 (from 0.25)
+targets: [0.10, 0.12, 0.15, 0.20, 0.22, 0.25. 0.27, 0.30]
+epochs 12, p=5 (from 10, 4)
+
+Also set baseline min accuracy to 0.8400 to let pruning run without halts.
+
+**Config:**
+see config.yaml
+
+**Result:**
+10.00% 0.8605
+12.00% 0.8610
+15.00% 0.8547
+20.00% 0.8486
+22.00% 0.8490
+25.00% 0.8486
+27.00% 0.8474
+30.00% 0.8456
+
+**Analysis:**
+
+---
+
+(On PC)
+**Run:** (4) 2025-11-08_19-15-45_student_mbv3s_vww96_prune
+
+**Goal:** tune params to recovery better and try lower target steps (to reduce single step shock)
+
+**Change vs prev:**
+lr: 0.0001 from 0.00007
+still switching to 0.00003 after 20%
+targets: [0.10, 0.12, 0.15, 0.17, 0.20, 0.22, 0.25. 0.27, 0.30]
+
+**Config:**
+see config.yaml
+
+**Result:**
+10.00% 0.8608
+12.00% 0.8598
+15.00% 0.8553
+17.00% 0.8562
+20.00% 0.8526
+22.00% 0.8499
+25.00% 0.8510
+27.00% 0.8480
+30.00% 0.8460
+
+**Analysis:**
 
 ---

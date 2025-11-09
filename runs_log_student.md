@@ -834,16 +834,15 @@ should ema again but with previous teacher
 ---
 
 (on PC)
-**Run:** (23)
+**Run:** (23) 2025-11-09_19-58-55_student_mbv3s_vww96
 
 **Goal:** change of config to suit new teacher
 
 **Change vs prev:**
 max_lr: 0.0005
 pct_start: 0.3
-div_factor: 10.0
-final_div_factor: 200.0
-(^ slower cool down at tail of onecycle - more late training)
+div_factor: 20.0
+final_div_factor: 10000.0
 alpha: 0.50
 alpha_constant: false
 alpha_start: 0.40
@@ -856,9 +855,30 @@ confidence_gamma: 1.0
 margin_weight: 0.02
 
 **Result:**
-val_acc=
-no person recall:
-person recall:
+val_acc= 0.8600
+no person recall: -
+person recall: -
+
+failed miserably
+
+**Confusion highlights:**
+
+---
+
+(on PC)
+**Run:** (24)
+
+**Goal:** using same teacher and config as run 17 but with ema
+
+**Change vs prev:**
+ema 0.999
+
+**Result:**
+val_acc= 0.8691
+no person recall: 0.89
+person recall: 0.85
+
+Don't use this. EMA models can be difficult to train further.
 
 **Confusion highlights:**
 

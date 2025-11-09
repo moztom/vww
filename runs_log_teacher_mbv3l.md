@@ -231,27 +231,135 @@ person recall: 0.91
 
 ---
 
-**Run:** (9)
+**Run:** (9) 2025-11-08_22-28-58_teacher_mbv3l_vww96
 
-**Goal:** Squeeze more performance
+**Goal:** Same as run 3 but with the below changes
+
+**Change vs prev:**
+compared to run 3:
+color_jitter (0.15 -> 0.2): [0.2, 0.2, 0.2, 0.0]
+random_erasing (p=0 -> 0.15): [0.15, 0.02, 0.12, 0.3, 3.3]
+kd label smoothing 0.02 -> 0.05
+grad clip 0 -> 2
+freeze backbone for 2 epochs
+more epochs
+pct_start 0.1 -> 0.3
+
+**Config:**
+
+**Data:**
+
+**Result:**
+val_acc=0.88695
+
+no person recall: 0.94
+person recall: 0.83
+
+ever so slightly better results than run 3 (my current best)
+next try self-distill
+
+**Confusion highlights:**
+[3986, 273],
+[638, 3162]
+
+---
+
+**Run:** (10) 2025-11-09_00-31-36_teacher_mbv3l_vww96_self_distill
+
+**Goal:** Try out self distillation from 224 teacher (run 2) to 96
+Compare to run 3 which fine-tuned from 224 to 96. This approach uses kd instead.
 
 **Change vs prev:**
 
 **Config:**
-default pretrain (IMAGENET1K_V2)
 
 **Data:**
-Imagenet mean/std normalization
-RandomHorizontalFlip
-ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.0)
-RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3))
 
 **Result:**
-val_acc=
+val_acc= 0.8896
 
-no person recall:
-person recall:
+no person recall: 0.93
+person recall: 0.84
 
 **Confusion highlights:**
+[3969, 290],
+[600, 3200]
+
+---
+
+**Run:** (11) 2025-11-09_13-44-43_teacher_mbv3l_vww96_self_distill
+
+**Goal:** Self distill but with slightly more random erasing
+
+**Change vs prev:**
+RE p 0.15 -> 0.2
+
+**Config:**
+
+**Data:**
+
+**Result:**
+val_acc= 0.8889
+
+no person recall: 0.93
+person recall: 0.85
+
+Slightly worse accuracy but better calibration. Not good enough improvement so reverting change.
+Though this one is probably better as a teacher for kd
+
+**Confusion highlights:**
+[[3948  311]
+ [ 584 3216]]
+
+---
+
+**Run:** (12) 2025-11-09_14-29-18_teacher_mbv3l_vww96_self_distill
+
+**Goal:** Self distill but with frozen backbone for 2 epochs
+
+**Change vs prev:**
+added frozen backbone wiring for kd
+re back to 0.15
+
+**Config:**
+
+**Data:**
+
+**Result:**
+val_acc= 0.8888 (epoch 12)
+
+no person recall: 0.93
+person recall: 0.85
+
+No improvement, but did stabalise it seems.
+
+**Confusion highlights:**
+
+---
+
+**Run:** (13) 2025-11-09_15-42-08_teacher_mbv3l_vww96_self_distill
+
+**Goal:** Self distill with EMA (compare to prev run)
+
+**Change vs prev:**
+add ema decay at 0.999
+
+(with froz backbone)
+
+**Config:**
+
+**Data:**
+
+**Result:**
+val_acc= 0.8909 (epoch 9)
+
+no person recall: 0.93
+person recall: 0.85
+
+Nice performance gain
+
+**Confusion highlights:**
+[[3961  298]
+ [ 581 3219]]
 
 ---

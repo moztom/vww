@@ -753,7 +753,7 @@ seed 35, acc - 0.8660
 ---
 
 (on PC)
-**Run:** (xx) 2025-11-08_21-23-26_student_mbv3s_vww96
+**Run:** (21) 2025-11-08_21-23-26_student_mbv3s_vww96
 
 **Goal:** Try 0.05 label smoothing (on ce in kd loss function) rather than 0
 
@@ -787,5 +787,79 @@ Same exact result as run 17 but more stable at end, so better.
 **Confusion highlights:**
 [[3793  466]
  [ 598 3202]]
+
+---
+
+(on PC)
+**Run:** (22) 2025-11-09_17-08-07_student_mbv3s_vww96
+
+**Goal:** Same a prev but with better teacher (self distill and ema)
+
+**Change vs prev:**
+new teacher: 2025-11-09_15-42-08_teacher_mbv3l_vww96_self_distill\model.pt
+
+**Config:**
+
+**Result:**
+val_acc= 0.8640
+no person recall: 0.89
+person recall: 0.84
+
+better teacher didn't help - this will be because i used the student config tuned for different teacher.
+
+**Confusion highlights:**
+
+---
+
+(on PC)
+**Run:** (23) 2025-11-09_17-10-33_student_mbv3s_vww96
+
+**Goal:** Same a prev but with ema
+
+**Change vs prev:**
+added ema decay at 0.999
+
+**Config:**
+
+**Result:**
+val_acc= 0.8681
+no person recall: 0.90
+person recall: 0.83
+
+better technically, but "better" teacher likely hindering
+should ema again but with previous teacher
+
+**Confusion highlights:**
+
+---
+
+(on PC)
+**Run:** (23)
+
+**Goal:** change of config to suit new teacher
+
+**Change vs prev:**
+max_lr: 0.0005
+pct_start: 0.3
+div_factor: 10.0
+final_div_factor: 200.0
+(^ slower cool down at tail of onecycle - more late training)
+alpha: 0.50
+alpha_constant: false
+alpha_start: 0.40
+alpha_end: 0.50
+alpha_warmup_epochs: 3
+alpha_decay_end_epoch: 12
+temperature: 4.0
+label_smoothing: 0.02
+confidence_gamma: 1.0
+margin_weight: 0.02
+
+**Result:**
+val_acc=
+no person recall:
+person recall:
+
+**Confusion highlights:**
 
 ---

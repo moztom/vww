@@ -25,20 +25,19 @@ def set_seed(seed=42):
         torch.cuda.manual_seed_all(seed)
 
         # cuBLAS requires this environment variable for deterministic matmul
-        os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
-        info["cublas_workspace_config"] = os.environ.get("CUBLAS_WORKSPACE_CONFIG")
+        # os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+        # info["cublas_workspace_config"] = os.environ.get("CUBLAS_WORKSPACE_CONFIG")
 
+        #torch.backends.cudnn.benchmark = False
+        #torch.backends.cudnn.deterministic = True
+        #info["cudnn_benchmark"] = torch.backends.cudnn.benchmark
+        #info["cudnn_deterministic"] = torch.backends.cudnn.deterministic
+
+    if hasattr(torch.backends, "cudnn") and torch.backends.cudnn.is_available():
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
         info["cudnn_benchmark"] = torch.backends.cudnn.benchmark
         info["cudnn_deterministic"] = torch.backends.cudnn.deterministic
-
-    else:
-        if hasattr(torch.backends, "cudnn") and torch.backends.cudnn.is_available():
-            torch.backends.cudnn.benchmark = False
-            torch.backends.cudnn.deterministic = True
-            info["cudnn_benchmark"] = torch.backends.cudnn.benchmark
-            info["cudnn_deterministic"] = torch.backends.cudnn.deterministic
 
     return info
 

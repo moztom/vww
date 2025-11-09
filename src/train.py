@@ -118,7 +118,7 @@ def main():
 
     # Final metrics -----
 
-    # Reload the best checkpoint before computing final metrics to ensure
+    # Reload the best checkpoint before computing final metrics
     final_model = ema.ema_model if ema else ctx["model"]
     try:
         best_ckpt_path = ctx["run_dir"] / "model.pt"

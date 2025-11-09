@@ -21,33 +21,37 @@ model:
     # dropout: 0.0 ?
 
 train:
-    epochs: 25
+    epochs: 30
     label_smoothing: 0.05
-    early_stop_patience: 10
+    early_stop_patience: 6
     grad_clip_norm: 2.0
     optimizer:
         name: 'adamw'
-        lr: 0.0007
+        lr: 0.0005
         weight_decay: 0.0001
     scheduler:
         name: 'onecycle'
-        max_lr: 0.0007
-        pct_start: 0.05
-        div_factor: 20.0
-        final_div_factor: 10000.0
+        max_lr: 0.0005
+        pct_start: 0.3
+        div_factor: 10.0
+        final_div_factor: 200.0
 
 kd:
     teacher:
-        checkpt: 'saved_runs\2025-10-26_17-53-08_teacher_mbv3l_vww96\model.pt'
+        checkpt: 'saved_runs\2025-11-09_15-42-08_teacher_mbv3l_vww96_self_distill\model.pt'
         arch: 'mobilenet_v3_large'
         pretrained: true
-    alpha: 0.55
-    alpha_constant: true
-    temperature: 2.0
+    alpha: 0.50
+    alpha_constant: false
+    alpha_start: 0.40
+    alpha_end: 0.50
+    alpha_warmup_epochs: 3
+    alpha_decay_end_epoch: 12
+    temperature: 4.0
     teacher_input_size: 96
-    label_smoothing: 0.05
-    confidence_gamma: 2.0
-    margin_weight: 0.03
+    label_smoothing: 0.02
+    confidence_gamma: 1.0
+    margin_weight: 0.02
     margin_weight_start:
     margin_weight_end:
     margin_weight_decay_end_epoch:

@@ -62,6 +62,7 @@ def kd_train_one_epoch(
     teacher_input_size=None,
     confidence_gamma=None,
     margin_weight=0.0,
+    ema=None,
 ):
     """ Train the student model for one epoch with knowledge distillation """
     
@@ -107,6 +108,9 @@ def kd_train_one_epoch(
 
         if scheduler:
             scheduler.step()
+        
+        if ema:
+            ema.update(student)
         
         batch_size = labels.size(0)
         loss_sum += loss.item() * batch_size

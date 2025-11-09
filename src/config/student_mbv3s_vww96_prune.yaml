@@ -51,9 +51,9 @@ kd:
 
 prune:
     strategy: 'global'
-    importance: 'bn_gamma' # "bn_gamma" or "l1_norm"
+    importance: 'l1_norm' # "bn_gamma" or "l1_norm"
     expand_only: true
-    targets: [0.10, 0.15, 0.20, 0.22, 0.25, 0.27, 0.30]
+    targets: [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]
     protect:
         block_min_channels: 16
         skip_first_n: 1

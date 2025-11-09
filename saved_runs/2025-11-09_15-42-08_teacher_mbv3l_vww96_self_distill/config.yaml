@@ -1,0 +1,63 @@
+meta:
+  name: teacher_mbv3l_vww96_self_distill
+  seed: 42
+  out_dir: runs
+  device: auto
+data:
+  path: data/vww96
+  batch: 256
+  num_workers: 4
+  mean:
+  - 0.485
+  - 0.456
+  - 0.406
+  std:
+  - 0.229
+  - 0.224
+  - 0.225
+  aug:
+    rand_hflip: 0.5
+    color_jitter:
+    - 0.2
+    - 0.2
+    - 0.2
+    - 0.0
+    random_erasing:
+    - 0.15
+    - 0.02
+    - 0.12
+    - 0.3
+    - 3.3
+model:
+  type: mobilenet_v3_large
+  pretrained: true
+train:
+  epochs: 22
+  early_stop_patience: 10
+  label_smoothing: 0.05
+  grad_clip_norm: 2.0
+  freeze_backbone_epochs: 2
+  ema_decay: 0.999
+  init_checkpoint: saved_runs/2025-10-24_21-17-59_teacher_mbv3l_vww244/model.pt
+  optimizer:
+    name: adamw
+    lr: 0.0003
+    weight_decay: 0.0001
+  scheduler:
+    name: onecycle
+    max_lr: 0.0003
+    pct_start: 0.3
+    div_factor: 10.0
+    final_div_factor: 1000.0
+kd:
+  teacher:
+    arch: mobilenet_v3_large
+    pretrained: true
+    checkpt: saved_runs/2025-10-24_21-17-59_teacher_mbv3l_vww244/model.pt
+  alpha: 0.5
+  alpha_constant: true
+  temperature: 4.0
+  teacher_input_size: 224
+  label_smoothing: 0.05
+  confidence_gamma: 0.0
+  margin_weight: 0.0

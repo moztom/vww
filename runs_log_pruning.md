@@ -131,3 +131,27 @@ see config.yaml
 **Analysis:**
 
 ---
+
+(On PC)
+**Run:** (5) runs\2025-11-09_18-08-14_student_mbv3s_vww96_prune
+
+**Goal:** change to l1_norm importance
+
+**Change vs prev:**
+bn_gamma -> l1_norm
+
+**Config:**
+see config.yaml
+
+**Result:**
+10.00% 0.8657
+15.00% 0.8650
+20.00% 0.8620
+25.00% 0.8618
+27.00% 0.8633
+30.00% 0.8620
+
+**Analysis:**
+Much better performance with l1_norm importance - does a better job identifying unimportant channels
+
+---

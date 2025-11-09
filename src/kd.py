@@ -9,6 +9,8 @@ from src.engine.setup import build_context
 from src.engine.kd import kd_train_one_epoch
 from src.engine.train_loops import evaluate
 from src.engine.utils import log_epoch, compute_model_complexity
+from src.engine.finetune_utils import set_backbone_trainable
+from src.engine.ema import ModelEMA
 
 
 def main():
@@ -29,6 +31,20 @@ def main():
     best_epoch = 0
     patience = 0
     overall_start = time.perf_counter()
+
+    # ema
+    ema = None
+    if ctx.get("ema_decay"):
+        ema = ModelEMA(ctx["model"], ctx["ema_decay"])
+        ema.to(ctx["device"])
+
+    # backbone freeze
+    freeze_epochs = ctx.get("freeze_backbone_epochs", 0) or 0
+    backbone_frozen = False
+    if freeze_epochs > 0:
+        set_backbone_trainable(ctx["model"], False)
+        backbone_frozen = True
+        print(f"Freezing backbone for first {freeze_epochs} epochs")
 
     def _compute_alpha(epoch: int) -> float:
         """Epoch-wise KD alpha schedule: CE-heavy warmup then linear to target.
@@ -127,9 +143,11 @@ def main():
             teacher_input_size=ctx.get("kd_teacher_input_size"),
             confidence_gamma=ctx.get("kd_confidence_gamma"),
             margin_weight=epoch_margin,
+            ema=ema,
         )
 
-        va_loss, va_acc, *_ = evaluate(ctx["model"], ctx["val_loader"], ctx["device"])
+        model_for_eval = ema.ema_model if ema else ctx["model"]
+        va_loss, va_acc, *_ = evaluate(model_for_eval, ctx["val_loader"], ctx["device"])
 
         epoch_elapsed = time.perf_counter() - epoch_start
         elapsed_total = time.perf_counter() - overall_start
@@ -165,7 +183,7 @@ def main():
             patience = 0
 
             torch.save(
-                ctx["model"].state_dict(),
+                model_for_eval.state_dict(),
                 ctx["run_dir"] / "model.pt"
             )
 
@@ -174,22 +192,28 @@ def main():
             if patience >= ctx["max_patience"]:
                 print(f"No improvement in {ctx['max_patience']} epochs, stopping early")
                 break
+        
+        if backbone_frozen and epoch >= freeze_epochs:
+            set_backbone_trainable(ctx["model"], True)
+            backbone_frozen = False
+            print("Backbone unfrozen")
 
     total_elapsed = time.perf_counter() - overall_start
 
     # Final metrics ----------
     
-    # Reload the best checkpoint before computing final metrics to align
+    # Reload the best checkpoint before computing final metrics
+    final_model = ema.ema_model if ema else ctx["model"]
     try:
         best_ckpt_path = ctx["run_dir"] / "model.pt"
         checkpt = torch.load(best_ckpt_path, map_location="cpu")
-        ctx["model"].load_state_dict(checkpt, strict=True)
+        final_model.load_state_dict(checkpt, strict=True)
     except Exception:
         # If loading fails, evaluate with current in-memory weights
         pass
 
     va_loss, va_acc, preds, gts = evaluate(
-        ctx["model"], ctx["val_loader"], ctx["device"], metrics=True
+        final_model, ctx["val_loader"], ctx["device"], metrics=True
     )
     print("\nVALIDATION SUMMARY")
     print(
@@ -215,7 +239,7 @@ def main():
     print("\nClassification report:")
     print(classification_report(gts, preds, labels=labels, target_names=target_names))
 
-    complexity = compute_model_complexity(ctx["model"], ctx["val_loader"])
+    complexity = compute_model_complexity(final_model, ctx["val_loader"])
     param_count = macs = None
     if complexity:
         param_count = complexity["param_count"]

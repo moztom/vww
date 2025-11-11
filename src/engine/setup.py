@@ -84,8 +84,27 @@ def build_context(config_path: Path, stage: str = None):
         "config": cfg,
     }
 
-    if stage in ("kd", "prune"):
-        kd_cfg = cfg["kd"]
+    quant_cfg = None
+    quant_requires_teacher = False
+    if stage == "quant":
+        quant_cfg = cfg.get("quant")
+        if not quant_cfg:
+            raise ValueError("Missing 'quant' section in config for quantization stage.")
+        context["quant_cfg"] = quant_cfg
+
+        quant_mode = str(quant_cfg.get("mode", "ptq")).lower()
+        if quant_mode not in ("ptq", "qat"):
+            raise ValueError(f"Unsupported quantization mode '{quant_mode}'. Use 'ptq' or 'qat'.")
+
+        quant_kd_cfg = quant_cfg.get("kd", {})
+        quant_requires_teacher = quant_mode == "qat" and bool(quant_kd_cfg.get("use_kd", True))
+
+    needs_teacher = stage in ("kd", "prune") or quant_requires_teacher
+    if needs_teacher:
+        kd_cfg = cfg.get("kd")
+        if kd_cfg is None:
+            raise ValueError("Knowledge distillation settings required but missing 'kd' section in config.")
+
         teacher_cfg = kd_cfg["teacher"]
 
         teacher = build_model(teacher_cfg["arch"], teacher_cfg["pretrained"])
@@ -120,9 +139,6 @@ def build_context(config_path: Path, stage: str = None):
 
     if stage == "prune":
         context["prune_cfg"] = cfg["prune"]
-
-    if stage == "quant":
-        pass
 
     return context
 

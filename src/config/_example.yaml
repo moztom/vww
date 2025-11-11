@@ -39,22 +39,63 @@ train:
 # Only used when stage=kd
 kd:
     teacher:
-        checkpt: 'runs/teacher/best.pt' # or null to train teacher first
-        arch: 'mobilenetv3_large'
+        checkpt: 'runs\2025-10-28_22-11-40_teacher_effnetb2_vww96\model.pt'
+        arch: 'efficientnet_b2'
         pretrained: true
-    alpha: 0.5 # CE weight
-    temperature: 4.0
+    alpha: 0.55
+    alpha_constant: true
+    temperature: 2.0
+    teacher_input_size: 96
+    label_smoothing: 0.01
+    confidence_gamma: 2.0
+    margin_weight: 0.03
+    margin_weight_start:
+    margin_weight_end:
+    margin_weight_decay_end_epoch:
 
 # Only used when stage=prune
 prune:
-    method: 'global_magnitude'
-    amount: 0.5 # overall sparsity
-    finetune_epochs: 5
-    finetune_lr: 0.0005
+    strategy: 'global'
+    importance: 'bn_gamma' # "bn_gamma" or "l1_norm"
+    expand_only: true
+    targets: [0.10, 0.20, 0.30]
+    protect:
+        block_min_channels: 16
+        skip_first_n: 1
+        keep_block_indices: []
+    finetune:
+        use_kd: true
+        epochs: 4
+        lr: 0.0001
+        lr_high: 0.00005
+        lr_high_threshold: 0.25
+        weight_decay: 0.00001
+        patience: 2
+        bn_recalibrate_loader: val
+        bn_recalibrate_batches: 32
+    grad_clip_norm: 2.0
+    acceptance:
+        baseline_accuracy: 0.8562
+        max_drop_after_step: 0.015
 
 # Only used when stage=quant
 quant:
-    mode: 'ptq' # ptq|qat
-    calibrate_batches: 50
-    qat_epochs: 10
-    qat_lr: 0.0005
+    mode: 'ptq' # ptq | qat
+    backend: 'auto' # auto | fbgemm | qnnpack
+    calibrate_split: 'val' # 'train' or 'val'
+    calibrate_batches: 512
+    ptq:
+        exclude_first_last: true
+    qat:
+        epochs: 5
+        lr: 0.00005
+        weight_decay: 0.00001
+        patience: 2
+        grad_clip_norm: 2.0
+        exclude_first_last: false
+    kd:
+        use_kd: true
+        alpha: 0.55 # override optional, fallback to top-level kd.* if omitted
+        temperature: 3.0
+        margin_weight: 0.0
+        label_smoothing: 0.0

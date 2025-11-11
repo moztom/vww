@@ -1,0 +1,88 @@
+{
+  "target_fraction": 0.27,
+  "removed_channels": 46,
+  "cumulative_fraction": 0.27017543859649124,
+  "pre_recovery_accuracy": 0.855813376349423,
+  "post_recovery_accuracy": 0.8632584687926542,
+  "best_recovery_accuracy": 0.8632584687926542,
+  "best_recovery_epoch": 5,
+  "learning_rate": 5e-05,
+  "per_block": {
+    "11": {
+      "removed_channels": [
+        22,
+        25,
+        82,
+        99,
+        123,
+        156,
+        172,
+        183,
+        201,
+        216,
+        243,
+        287,
+        291,
+        305,
+        319,
+        382,
+        395,
+        401,
+        412,
+        461,
+        507,
+        533,
+        561,
+        564,
+        567
+      ],
+      "remaining": 338
+    },
+    "10": {
+      "removed_channels": [
+        76,
+        149,
+        151,
+        163,
+        166,
+        175,
+        198,
+        226,
+        269,
+        295,
+        366,
+        436,
+        460,
+        480,
+        493,
+        510,
+        534
+      ],
+      "remaining": 239
+    },
+    "9": {
+      "removed_channels": [
+        113
+      ],
+      "remaining": 282
+    },
+    "6": {
+      "removed_channels": [
+        7,
+        13
+      ],
+      "remaining": 233
+    },
+    "5": {
+      "removed_channels": [
+        23
+      ],
+      "remaining": 235
+    }
+  },
+  "complexity": {
+    "param_count": 1220142,
+    "macs": 10504090
+  },
+  "acceptance_message": null
+}

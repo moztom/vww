@@ -81,7 +81,6 @@ prune:
 # Only used when stage=quant
 quant:
     mode: 'ptq' # ptq | qat
-    backend: 'auto' # auto | fbgemm | qnnpack
     calibrate_split: 'val' # 'train' or 'val'
     calibrate_batches: 512
     ptq:

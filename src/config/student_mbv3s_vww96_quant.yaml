@@ -50,12 +50,11 @@ kd:
     margin_weight: 0.0
 
 quant:
-    mode: 'ptq' # ptq | qat
-    backend: 'auto' # auto | fbgemm | qnnpack
+    mode: 'qat' # ptq | qat
     calibrate_split: 'val' # 'train' or 'val'
     calibrate_batches: 512
     ptq:
-        exclude_first_last: true
+        exclude_first_last: false
     qat:
         epochs: 5
         lr: 0.00005

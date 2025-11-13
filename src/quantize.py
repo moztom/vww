@@ -23,6 +23,7 @@ def main():
     ctx = build_context(args.config_path, stage="quant")
     run_dir = ctx["run_dir"]
 
+    '''
     print("Evaluating FP32 baseline before quantization...")
     baseline_start = time.perf_counter()
     base_loss, base_acc, *_ = evaluate(ctx["model"], ctx["val_loader"], ctx["device"])
@@ -39,6 +40,8 @@ def main():
         )
     else:
         params = macs = None
+    
+    '''
 
     summary = run_quantization(ctx)
 
@@ -46,6 +49,7 @@ def main():
     print(f"INT8 accuracy: {summary['val_acc']:.4f} | loss {summary['val_loss']:.4f}")
     print(f"Saved quantized weights to:\n  - {summary['state_dict_path']}\n  - {summary['full_model_path']}")
 
+    '''
     _append_metrics(run_dir, {
         "tag": "baseline_fp32",
         "val_acc": base_acc,
@@ -54,6 +58,7 @@ def main():
         "param_count": params,
         "macs": macs,
     })
+    '''
     _append_metrics(run_dir, {
         "tag": f"quant_{summary['mode']}",
         **summary,

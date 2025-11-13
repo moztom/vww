@@ -1,0 +1,29 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+torchaudio = "*"
+onnx = "*"
+onnxruntime = "*"
+coremltools = "*"
+thop = "*"
+rich = "*"
+scikit-learn = "*"
+black = "*"
+tqdm = "*"
+pyvww = "*"
+pycocotools = "*"
+matplotlib = "*"
+pyyaml = "*"
+tensorboard = "*"
+torch = "==2.9"
+torchvision = "==0.24"
+torchao = "==0.14.1"
+
+[dev-packages]
+torch-tb-profiler = "*"
+
+[requires]
+python_version = "3.12"

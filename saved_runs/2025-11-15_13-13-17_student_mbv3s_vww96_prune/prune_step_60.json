@@ -1,0 +1,171 @@
+{
+  "target_fraction": 0.6,
+  "removed_channels": 114,
+  "cumulative_fraction": 0.6,
+  "pre_recovery_accuracy": 0.8322372502791909,
+  "post_recovery_accuracy": 0.8596600074450924,
+  "best_recovery_accuracy": 0.8596600074450924,
+  "best_recovery_epoch": 8,
+  "learning_rate": 5e-05,
+  "per_block": {
+    "9": {
+      "removed_channels": [
+        24,
+        119,
+        150,
+        151,
+        158,
+        165,
+        191,
+        207,
+        248
+      ],
+      "remaining": 270
+    },
+    "6": {
+      "removed_channels": [
+        3,
+        4,
+        8,
+        16,
+        22,
+        23,
+        26,
+        32,
+        40,
+        47,
+        57,
+        61,
+        69,
+        91,
+        93,
+        100,
+        104,
+        108,
+        117,
+        120,
+        123,
+        130,
+        142,
+        152,
+        155,
+        156,
+        161,
+        173,
+        180,
+        186,
+        193,
+        197,
+        198,
+        214,
+        222,
+        227,
+        235
+      ],
+      "remaining": 160
+    },
+    "10": {
+      "removed_channels": [
+        126,
+        332,
+        358
+      ],
+      "remaining": 16
+    },
+    "8": {
+      "removed_channels": [
+        12,
+        15,
+        20,
+        30,
+        32,
+        34,
+        36,
+        37,
+        44,
+        59,
+        61,
+        67,
+        70,
+        75,
+        76,
+        85,
+        88,
+        89,
+        92,
+        93,
+        97,
+        104,
+        107,
+        114,
+        132,
+        135,
+        141
+      ],
+      "remaining": 100
+    },
+    "5": {
+      "removed_channels": [
+        15,
+        19,
+        32,
+        34,
+        43,
+        47,
+        49,
+        55,
+        56,
+        70,
+        82,
+        85,
+        87,
+        89,
+        93,
+        101,
+        128,
+        152,
+        153,
+        163,
+        166,
+        169,
+        174,
+        175,
+        176,
+        182,
+        185,
+        197,
+        210,
+        211
+      ],
+      "remaining": 167
+    },
+    "4": {
+      "removed_channels": [
+        46,
+        62,
+        94
+      ],
+      "remaining": 90
+    },
+    "3": {
+      "removed_channels": [
+        60,
+        61
+      ],
+      "remaining": 71
+    },
+    "7": {
+      "removed_channels": [
+        19,
+        29,
+        57
+      ],
+      "remaining": 115
+    }
+  },
+  "complexity": {
+    "param_count": 894440,
+    "macs": 8326970
+  },
+  "acceptance_message": null
+}

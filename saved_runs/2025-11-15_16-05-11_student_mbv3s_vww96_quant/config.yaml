@@ -1,0 +1,81 @@
+meta:
+  name: student_mbv3s_vww96_quant
+  seed: 35
+  out_dir: runs
+  device: auto
+data:
+  path: data/vww96
+  batch: 256
+  num_workers: 4
+  mean:
+  - 0.485
+  - 0.456
+  - 0.406
+  std:
+  - 0.229
+  - 0.224
+  - 0.225
+  aug:
+    rand_hflip: 0.5
+    color_jitter:
+    - 0.2
+    - 0.2
+    - 0.2
+    - 0.0
+    random_erasing:
+    - 0.0
+    - 0.02
+    - 0.12
+    - 0.3
+    - 3.3
+model:
+  type: mobilenet_v3_small
+  pretrained: true
+train:
+  epochs: 1
+  early_stop_patience: 1
+  grad_clip_norm: 2.0
+  label_smoothing: 0.0
+  init_checkpoint: null
+  init_pruned_full_checkpoint: runs\2025-11-15_13-13-17_student_mbv3s_vww96_prune\model_pruned_65_full.pt
+  optimizer:
+    name: adamw
+    lr: 7.0e-05
+    weight_decay: 0.0001
+  scheduler:
+    name: onecycle
+    max_lr: 7.0e-05
+    pct_start: 0.3
+    div_factor: 10.0
+    final_div_factor: 1000.0
+kd:
+  teacher:
+    arch: mobilenet_v3_large
+    pretrained: true
+    checkpt: saved_runs/2025-10-26_17-53-08_teacher_mbv3l_vww96/model.pt
+  alpha: 0.55
+  alpha_constant: true
+  temperature: 3.0
+  teacher_input_size: 96
+  label_smoothing: 0.0
+  confidence_gamma: 0.0
+  margin_weight: 0.0
+quant:
+  mode: ptq
+  calibrate_split: val
+  calibrate_batches: 512
+  ptq:
+    exclude_first_last: false
+  qat:
+    epochs: 5
+    lr: 5.0e-05
+    weight_decay: 1.0e-05
+    patience: 5
+    grad_clip_norm: 2.0
+    exclude_first_last: false
+  kd:
+    use_kd: false
+    alpha: 0.55
+    temperature: 3.0
+    margin_weight: 0.0
+    label_smoothing: 0.0

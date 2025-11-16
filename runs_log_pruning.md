@@ -185,6 +185,5 @@ also decreased training epochs: 12 -> 10
 80.00% n/a
 
 **Analysis:**
-50% still has plenty of headroom, try higher targets
 
 ---

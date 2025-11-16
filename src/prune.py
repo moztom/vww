@@ -115,8 +115,8 @@ def run_pruning(args: argparse.Namespace) -> None:
     base_loss, base_acc, *_ = evaluate(model, ctx["val_loader"], device)
     baseline_time = time.perf_counter() - baseline_start
     print(f"Baseline accuracy: {base_acc:.4f} (eval {baseline_time:.1f}s)")
-    base_checkpoint = run_dir / "model_pruned_base.pt"
-    torch.save(model.state_dict(), base_checkpoint)
+    base_checkpoint_full = run_dir / "model_pruned_base_full.pt"
+    torch.save({"model": model}, base_checkpoint_full)
 
     complexity = compute_model_complexity(model, ctx["val_loader"])
     model.to(device)
@@ -161,7 +161,7 @@ def run_pruning(args: argparse.Namespace) -> None:
         best_step_acc = -1.0
         best_step_loss = float("inf")
         best_epoch = 0
-        step_checkpoint = run_dir / f"model_pruned_{int(round(target * 100))}.pt"
+        step_checkpoint_full = run_dir / f"model_pruned_{int(round(target * 100))}_full.pt"
 
         for epoch in range(1, max_epochs + 1):
             global_epoch += 1
@@ -230,7 +230,7 @@ def run_pruning(args: argparse.Namespace) -> None:
                 best_step_acc = va_acc
                 best_step_loss = va_loss
                 best_epoch = epoch
-                torch.save(model.state_dict(), step_checkpoint)
+                torch.save({"model": model}, step_checkpoint_full)
                 patience = 0
             else:
                 patience += 1
@@ -238,9 +238,10 @@ def run_pruning(args: argparse.Namespace) -> None:
                     print(f"Early stopping recovery after {epoch} epochs (patience reached).")
                     break
 
-        if step_checkpoint.exists():
-            state = torch.load(step_checkpoint, map_location="cpu")
-            model.load_state_dict(state)
+        if step_checkpoint_full.exists():
+            obj = torch.load(step_checkpoint_full, map_location="cpu", weights_only=False)
+            saved_model = obj["model"] if isinstance(obj, dict) and "model" in obj else obj
+            model.load_state_dict(saved_model.state_dict())
             model.to(device)
 
         final_va_loss, final_va_acc, *_ = evaluate(model, ctx["val_loader"], device)

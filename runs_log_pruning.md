@@ -133,7 +133,7 @@ see config.yaml
 ---
 
 (On PC)
-**Run:** (5) runs\2025-11-09_18-08-14_student_mbv3s_vww96_prune
+**Run:** (5) 2025-11-09_18-08-14_student_mbv3s_vww96_prune
 
 **Goal:** change to l1_norm importance
 
@@ -153,5 +153,38 @@ see config.yaml
 
 **Analysis:**
 Much better performance with l1_norm importance - does a better job identifying unimportant channels
+
+---
+
+(On PC)
+**Run:** (6) 2025-11-14_20-26-41_student_mbv3s_vww96_prune
+
+**Goal:** same, but with higher target
+
+**Change vs prev:**
+targets increment in 5% steps from 0.10 to 0.80
+also decreased training epochs: 12 -> 10
+
+**Config:**
+
+**Result:**
+10.00% 0.8654
+15.00% 0.8631
+20.00% 0.8613
+25.00% 0.8620
+30.00% 0.8621
+35.00% 0.8611
+40.00% 0.8599
+45.00% 0.8583
+50.00% 0.8602
+55.00% 0.8603
+60.00% 0.8597
+65.00% 0.8604
+70.00% 0.8531
+75.00% 0.8491
+80.00% n/a
+
+**Analysis:**
+50% still has plenty of headroom, try higher targets
 
 ---

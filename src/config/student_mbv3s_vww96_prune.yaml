@@ -53,14 +53,31 @@ prune:
     strategy: 'global'
     importance: 'l1_norm' # "bn_gamma" or "l1_norm"
     expand_only: true
-    targets: [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]
+    targets:
+        [
+            0.10,
+            0.15,
+            0.20,
+            0.25,
+            0.30,
+            0.35,
+            0.40,
+            0.45,
+            0.50,
+            0.55,
+            0.60,
+            0.65,
+            0.70,
+            0.75,
+            0.80,
+        ]
     protect:
         block_min_channels: 16
         skip_first_n: 1
         keep_block_indices: []
     finetune:
         use_kd: true
-        epochs: 12
+        epochs: 10
         lr: 0.0001
         lr_high: 0.00005
         lr_high_threshold: 0.20

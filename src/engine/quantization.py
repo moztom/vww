@@ -1,3 +1,4 @@
+import io
 import json
 import warnings
 from pathlib import Path
@@ -7,27 +8,16 @@ import torch
 import torch.nn as nn
 from torch.optim import AdamW
 from torch.export import Dim, export
-from torchao.quantization.pt2e import move_exported_model_to_eval
+from torchao.quantization.pt2e import move_exported_model_to_eval, allow_exported_model_train_eval
+from torchao.quantization.pt2e.lowering import lower_pt2e_quantized_to_x86
 from torchao.quantization.pt2e.quantize_pt2e import (
     prepare_pt2e,
     convert_pt2e,
     prepare_qat_pt2e,
 )
+from torchao.quantization.pt2e.quantizer.x86_inductor_quantizer import X86InductorQuantizer
+import torchao.quantization.pt2e.quantizer.x86_inductor_quantizer as xiq
 
-from torch.ao.quantization import allow_exported_model_train_eval
-
-
-from torch.ao.quantization.quantizer.xnnpack_quantizer import (
-    get_symmetric_quantization_config,
-    XNNPACKQuantizer,
-)
-
-'''
-from executorch.backends.xnnpack.quantizer.xnnpack_quantizer import (
-  get_symmetric_quantization_config,
-  XNNPACKQuantizer,
-)
-'''
 from src.engine.train_loops import evaluate, train_one_epoch
 from src.engine.kd import kd_train_one_epoch
 
@@ -54,16 +44,22 @@ def _run_ptq(ctx: Dict, quant_cfg: Dict) -> Dict:
     model = ctx["model"].to("cpu").eval()
 
     example_input = _example_input(ctx["val_loader"])
+    lower_example_inputs = (example_input.clone(),)
     batch_dim = Dim.AUTO
     exported = export(
         model,
         (example_input,),
         dynamic_shapes=({0: batch_dim},),
-    ).module(check_guards=False)
+    ).module()
+
+    fp32_loss, fp32_acc = _evaluate_exported_graph(exported, ctx["val_loader"])
+    fp32_bytes = _state_dict_num_bytes(exported)
+    print(f"Exported FP32 acc: {fp32_acc:.4f} | loss {fp32_loss:.4f}")
+
     ptq_cfg = quant_cfg.get("ptq", {})
     exclude_first_last = bool(ptq_cfg.get("exclude_first_last", True))
 
-    quantizer = _build_xnnpack_quantizer(model, exclude_first_last, is_qat=False)
+    quantizer = _build_x86_quantizer(exported, exclude_first_last, is_qat=False)
     prepared = prepare_pt2e(exported, quantizer)
     # Allow calling train()/eval() on exported models inside our loops
     allow_exported_model_train_eval(prepared)
@@ -72,22 +68,35 @@ def _run_ptq(ctx: Dict, quant_cfg: Dict) -> Dict:
     calibrate_batches = int(quant_cfg.get("calibrate_batches", 200))
     observed_batches = _calibrate_model(prepared, calibrate_loader, calibrate_batches)
 
+    _ensure_source_fn_stack(prepared)
     quantized = convert_pt2e(prepared)
     allow_exported_model_train_eval(quantized)
     metrics = _evaluate_on_cpu(quantized, ctx["val_loader"])
+
+    lowered_metrics = None
+    lowered = None
+    lowered = lower_pt2e_quantized_to_x86(quantized, lower_example_inputs)
+    allow_exported_model_train_eval(lowered)
+    lowered_metrics = _evaluate_on_cpu(lowered, ctx["val_loader"])
 
     state_path, full_path = _save_quantized_model(quantized, ctx["run_dir"], suffix="ptq")
     state_bytes = state_path.stat().st_size
     full_bytes = full_path.stat().st_size if full_path and full_path.exists() else None
     summary = {
         "mode": "ptq",
-        "backend": "xnnpack",
+        "backend": "x86",
         "exclude_first_last": exclude_first_last,
         "calibrate_split": quant_cfg.get("calibrate_split", "val"),
         "calibrate_batches": calibrate_batches,
         "calibrate_batches_observed": observed_batches,
+        "exported_loss": fp32_loss,
+        "exported_acc": fp32_acc,
+        "exported_state_mb": _bytes_to_mb(fp32_bytes),
         "val_loss": metrics["loss"],
         "val_acc": metrics["acc"],
+        "quantized_state_mb": _bytes_to_mb(state_bytes),
+        "lowered_loss": lowered_metrics["loss"] if lowered_metrics else None,
+        "lowered_acc": lowered_metrics["acc"] if lowered_metrics else None,
         "state_dict_path": str(state_path),
         "full_model_path": str(full_path) if full_path else None,
         "state_dict_bytes": state_bytes,
@@ -105,13 +114,15 @@ def _run_qat(ctx: Dict, quant_cfg: Dict) -> Dict:
     model = ctx["model"].to(device=device, dtype=torch.float32)
     model.train()
     example_input = _example_input(ctx["val_loader"]).to(device)
+    lower_example_inputs = (example_input.detach().cpu(),)
     batch_dim = Dim.AUTO
     exported = export(
         model,
         (example_input,),
         dynamic_shapes=({0: batch_dim},),
-    ).module(check_guards=False)
-    quantizer = _build_xnnpack_quantizer(model, exclude_first_last, is_qat=True)
+    ).module()
+
+    quantizer = _build_x86_quantizer(model, exclude_first_last, is_qat=True)
     prepared = prepare_qat_pt2e(exported, quantizer)
     prepared.to(device)
     allow_exported_model_train_eval(prepared)
@@ -187,6 +198,20 @@ def _run_qat(ctx: Dict, quant_cfg: Dict) -> Dict:
             if tr_margin is not None:
                 writer.add_scalar("margin_loss", float(tr_margin), epoch)
 
+        if use_kd:
+            print(
+                f"[QAT] Epoch {epoch}/{epochs} | "
+                f"train loss {tr_loss:.4f} acc {tr_acc:.4f} "
+                f"(ce {tr_ce:.4f} kl {tr_kl:.4f} margin {tr_margin:.4f}) | "
+                f"val loss {va_loss:.4f} acc {va_acc:.4f}"
+            )
+        else:
+            print(
+                f"[QAT] Epoch {epoch}/{epochs} | "
+                f"train loss {tr_loss:.4f} acc {tr_acc:.4f} | "
+                f"val loss {va_loss:.4f} acc {va_acc:.4f}"
+            )
+
         if va_acc > best_acc:
             best_acc = va_acc
             best_epoch = epoch
@@ -201,6 +226,10 @@ def _run_qat(ctx: Dict, quant_cfg: Dict) -> Dict:
         prepared.load_state_dict(best_state)
 
     prepared.to("cpu")
+    fp32_metrics = _evaluate_on_cpu(prepared, ctx["val_loader"])
+    fp32_bytes = _state_dict_num_bytes(prepared)
+
+    _ensure_source_fn_stack(prepared)
     recal_loader = _pick_loader(ctx, quant_cfg.get("calibrate_split", "val"))
     calibrate_batches = int(quant_cfg.get("calibrate_batches", 200))
     observed_batches = _calibrate_model(prepared, recal_loader, calibrate_batches)
@@ -209,12 +238,18 @@ def _run_qat(ctx: Dict, quant_cfg: Dict) -> Dict:
     allow_exported_model_train_eval(quantized)
     metrics = _evaluate_on_cpu(quantized, ctx["val_loader"])
 
+    lowered_metrics = None
+    lowered = None
+    lowered = lower_pt2e_quantized_to_x86(quantized, lower_example_inputs)
+    allow_exported_model_train_eval(lowered)
+    lowered_metrics = _evaluate_on_cpu(lowered, ctx["val_loader"])
+
     state_path, full_path = _save_quantized_model(quantized, ctx["run_dir"], suffix="qat")
     state_bytes = state_path.stat().st_size
     full_bytes = full_path.stat().st_size if full_path and full_path.exists() else None
     summary = {
         "mode": "qat",
-        "backend": "xnnpack",
+        "backend": "x86",
         "exclude_first_last": exclude_first_last,
         "epochs": epochs,
         "best_epoch": best_epoch,
@@ -222,8 +257,14 @@ def _run_qat(ctx: Dict, quant_cfg: Dict) -> Dict:
         "calibrate_split": quant_cfg.get("calibrate_split", "val"),
         "calibrate_batches": calibrate_batches,
         "calibrate_batches_observed": observed_batches,
+        "exported_loss": fp32_metrics["loss"],
+        "exported_acc": fp32_metrics["acc"],
+        "exported_state_mb": _bytes_to_mb(fp32_bytes),
         "val_loss": metrics["loss"],
         "val_acc": metrics["acc"],
+        "quantized_state_mb": _bytes_to_mb(state_bytes),
+        "lowered_loss": lowered_metrics["loss"] if lowered_metrics else None,
+        "lowered_acc": lowered_metrics["acc"] if lowered_metrics else None,
         "state_dict_path": str(state_path),
         "full_model_path": str(full_path) if full_path else None,
         "state_dict_bytes": state_bytes,
@@ -256,10 +297,16 @@ def _first_last_module_names(model: nn.Module) -> Tuple[Optional[str], Optional[
     return first_conv, last_linear
 
 
-def _build_xnnpack_quantizer(model: nn.Module, exclude_first_last: bool, *, is_qat: bool) -> XNNPACKQuantizer:
-    quantizer = XNNPACKQuantizer()
-    quantizer.set_global(get_symmetric_quantization_config(is_qat=is_qat))
-    # XNNPACKQuantizer does not support setting layers to None :(
+def _build_x86_quantizer(model: nn.Module, exclude_first_last: bool, is_qat: bool,):
+    quantizer = X86InductorQuantizer()
+    quantizer.set_global(xiq.get_default_x86_inductor_quantization_config(is_qat=is_qat))
+    
+    if exclude_first_last:
+        first_name, last_name = _first_last_module_names(model)
+        if first_name:
+            quantizer.set_module_name_qconfig(first_name, None)  # keep first conv in fp32
+        if last_name:
+            quantizer.set_module_name_qconfig(last_name, None)  # keep last linear in fp32
 
     return quantizer
 
@@ -291,6 +338,25 @@ def _evaluate_on_cpu(model: torch.nn.Module, loader) -> Dict[str, float]:
     return {"loss": float(loss), "acc": float(acc)}
 
 
+def _evaluate_exported_graph(model: torch.nn.Module, loader, device: str = "cpu") -> Tuple[float, float]:
+    criterion = nn.CrossEntropyLoss()
+    total = 0
+    loss_sum = 0.0
+    correct = 0
+    nonblock = torch.cuda.is_available()
+    with torch.inference_mode():
+        for imgs, labels in loader:
+            imgs = imgs.to(device, non_blocking=nonblock)
+            labels = labels.to(device, non_blocking=nonblock)
+            logits = model(imgs)
+            loss_sum += criterion(logits, labels).item() * labels.size(0)
+            correct += (logits.argmax(1) == labels).sum().item()
+            total += labels.size(0)
+    loss = loss_sum / total if total else 0.0
+    acc = correct / total if total else 0.0
+    return loss, acc
+
+
 def _save_quantized_model(model: torch.nn.Module, run_dir: Path, suffix: str) -> Tuple[Path, Optional[Path]]:
     run_dir = Path(run_dir)
     state_path = run_dir / f"model_int8_{suffix}_state.pt"
@@ -309,3 +375,25 @@ def _write_quant_summary(run_dir: Path, payload: Dict) -> None:
     summary_path = run_dir / "quant_summary.json"
     with open(summary_path, "w") as fh:
         json.dump(payload, fh, indent=2)
+
+
+def _ensure_source_fn_stack(graph_module: torch.nn.Module) -> None:
+    graph = getattr(graph_module, "graph", None)
+    if graph is None:
+        return
+    for node in graph.nodes:
+        metadata = getattr(node, "meta", None)
+        if isinstance(metadata, dict) and "source_fn_stack" not in metadata:
+            metadata["source_fn_stack"] = []
+
+
+def _state_dict_num_bytes(module: torch.nn.Module) -> int:
+    buffer = io.BytesIO()
+    torch.save(module.state_dict(), buffer)
+    return buffer.tell()
+
+
+def _bytes_to_mb(num_bytes: Optional[int]) -> Optional[float]:
+    if num_bytes is None:
+        return None
+    return num_bytes / (1024 * 1024)

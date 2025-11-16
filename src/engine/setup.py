@@ -36,15 +36,23 @@ def build_context(config_path: Path, stage: str = None):
     )
 
     # model
-    model = build_model(cfg["model"]["type"], cfg["model"]["pretrained"]).to(device)
+    pruned_full_checkpoint = cfg["train"].get("init_pruned_full_checkpoint")
+    load_pruned = stage == "quant" and pruned_full_checkpoint
+    if load_pruned:
+        obj = torch.load(Path(pruned_full_checkpoint), map_location="cpu", weights_only=False)
+        if isinstance(obj, dict) and "model" in obj:
+            obj = obj["model"]
+        model = obj.to(device)
+    else:
+        model = build_model(cfg["model"]["type"], cfg["model"]["pretrained"]).to(device)
 
-    # load initial checkpoint (if specified)
-    init_checkpoint = cfg["train"].get("init_checkpoint")
-    if init_checkpoint:
-        checkpt = torch.load(Path(init_checkpoint), map_location="cpu")
-        if isinstance(checkpt, dict) and "model" in checkpt:
-            checkpt = checkpt["model"]
-        model.load_state_dict(checkpt)
+        # load initial checkpoint (if specified)
+        init_checkpoint = cfg["train"].get("init_checkpoint")
+        if init_checkpoint:
+            checkpt = torch.load(Path(init_checkpoint), map_location="cpu")
+            if isinstance(checkpt, dict) and "model" in checkpt:
+                checkpt = checkpt["model"]
+            model.load_state_dict(checkpt)
 
     # criterion/loss
     criterion = CrossEntropyLoss(

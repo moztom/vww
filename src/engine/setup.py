@@ -89,7 +89,6 @@ def build_context(config_path: Path, stage: str = None):
         "ema_decay": cfg["train"].get("ema_decay"),
         "bn_recalibrate_epoch": cfg["train"].get("bn_recalibrate_epoch"),
         "bn_recalibrate_max_batches": cfg["train"].get("bn_recalibrate_max_batches"),
-        "config": cfg,
     }
 
     quant_cfg = None
@@ -130,7 +129,6 @@ def build_context(config_path: Path, stage: str = None):
             "teacher": teacher,
             "kd_alpha": float(kd_cfg.get("alpha", 0.5)),
             "kd_temp": float(kd_cfg.get("temperature", 4.0)),
-            # Optional scheduling controls
             "kd_alpha_start": kd_cfg.get("alpha_start", None),
             "kd_alpha_end": kd_cfg.get("alpha_end", None),
             "kd_alpha_warmup_epochs": kd_cfg.get("alpha_warmup_epochs", None),

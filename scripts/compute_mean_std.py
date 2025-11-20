@@ -1,12 +1,14 @@
-# Computes the mean and std of the VWW96 training set.
-#
-# Run from inside scripts/ directory.
-# Usage: python compute_mean_std.py
+"""
+Computes the mean and std of the VWW96 training set
+
+Usage: python scripts/compute_mean_std.py
+"""
 
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 import torch
 from pathlib import Path
+
 
 def compute_mean_std(data_root, batch=256, num_workers=4):
     # Use only ToTensor so you measure raw distribution (no flips/jitter)
@@ -38,8 +40,11 @@ def compute_mean_std(data_root, batch=256, num_workers=4):
     std = torch.sqrt(M2)
     return mean.tolist(), std.tolist()
 
+
 def main() -> None:
-    mean, std = compute_mean_std("../data/vww96")
+    repo_root = Path(__file__).resolve().parents[1]
+    data_path = repo_root / "data" / "vww96"
+    mean, std = compute_mean_std(data_path)
     print("MEAN =", mean, "STD =", std)
 
 if __name__ == "__main__":

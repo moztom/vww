@@ -1,5 +1,5 @@
 """
-End-to-end Visual Wake Words (VWW) data prep.
+End-to-end Visual Wake Words (VWW) data prep
 
 What it does (in one run):
 1) Downloads MS COCO (2014/2017) via helper scripts vendored under scripts/pyvww.
@@ -9,8 +9,7 @@ What it does (in one run):
    data/vww{size}/{train,val}/{0,1}/*.jpg
    where 1 = person present, 0 = no person.
 
-Usage:
-  pip install pyvww pycocotools pillow tqdm
+Example usage:
   python scripts/prepare_vww.py --year 2017 --size 96
 """
 
@@ -263,10 +262,6 @@ def export_split(
 
 
 def main() -> None:
-    """
-    Parse CLI args, run the full pipeline, and print where the ready-to-train
-    folders ended up.
-    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--year", choices=["2014", "2017"], default="2017", help="COCO split to use")
     ap.add_argument("--threshold", type=float, default=0.005, help="Area ratio for foreground presence (e.g., 0.5%)")
@@ -291,7 +286,6 @@ def main() -> None:
     )
 
     # 4) Export resized images for both splits
-    
     if args.size == 96:
         mode = "letterbox"
         pad_rgb = tuple(int(round(m * 255)) for m in IMAGENET_MEAN)

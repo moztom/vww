@@ -1,3 +1,11 @@
+"""
+Knowledge distillation for training of student models
+
+Default config: src/config/student_mbv3s_vww96.yaml
+
+Example usage: python -m src.distill
+"""
+
 import argparse, time, json
 from pathlib import Path
 import numpy as np
@@ -13,16 +21,8 @@ from src.engine.finetune_utils import set_backbone_trainable
 from src.engine.ema import ModelEMA
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument(
-        "--config_path", required=True, type=Path, help="Path to config file e.g. src\config\student_mbv3s_vww96.yaml"
-    )
-    ap.add_argument("--debug", required=False, type=bool, default=False)
-    args = ap.parse_args()
-
+def run_distillation(args: argparse.Namespace):
     ctx = build_context(args.config_path, stage="kd")
-
     if args.debug == True:
         print("Config load complete:")
         print(ctx)
@@ -45,84 +45,6 @@ def main():
         set_backbone_trainable(ctx["model"], False)
         backbone_frozen = True
         print(f"Freezing backbone for first {freeze_epochs} epochs")
-
-    def _compute_alpha(epoch: int) -> float:
-        """Epoch-wise KD alpha schedule: CE-heavy warmup then linear to target.
-
-        Optional context keys (if present in config):
-          - kd_alpha_start
-          - kd_alpha_end
-          - kd_alpha_warmup_epochs
-          - kd_alpha_decay_end_epoch
-          - kd_alpha_constant
-
-        Defaults:
-          start=0.9, end=ctx["kd_alpha"], warmup=5, decay_end=ctx["epochs"].
-        """
-
-        # Don't change alpha if constant flag set
-        if ctx.get("kd_alpha_constant"):
-            return float(ctx["kd_alpha"])
-        
-        total_epochs = ctx["epochs"]
-        start = ctx.get("kd_alpha_start", None)
-        end = ctx.get("kd_alpha_end", None)
-        if start is None:
-            start = 0.9
-        if end is None:
-            end = ctx["kd_alpha"]
-        warmup = ctx.get("kd_alpha_warmup_epochs", None)
-        if warmup is None:
-            warmup = 5
-        decay_end = ctx.get("kd_alpha_decay_end_epoch", None)
-        if decay_end is None:
-            decay_end = total_epochs
-
-        # Clamp and cast
-        warmup = max(0, int(warmup))
-        decay_end = max(warmup + 1, int(decay_end))
-        epoch = int(epoch)
-
-        if warmup > 0 and epoch <= warmup:
-            return float(start)
-
-        if epoch >= decay_end:
-            return float(end)
-
-        # Linear decay from start -> end between warmup+1 and decay_end
-        span = max(1, decay_end - warmup)
-        t = (epoch - warmup) / span
-        return float(start + t * (end - start))
-
-    def _compute_margin_weight(epoch: int) -> float:
-        """Optional linear schedule for margin loss weight."""
-
-        base = float(ctx.get("kd_margin_weight", 0.0))
-        start = ctx.get("kd_margin_weight_start")
-        end = ctx.get("kd_margin_weight_end")
-        decay_end = ctx.get("kd_margin_decay_end_epoch")
-
-        # If no schedule provided fall back to constant weight
-        if start is None and end is None and decay_end is None:
-            return base
-
-        if start is None:
-            start = base
-        if end is None:
-            end = base
-        if decay_end is None:
-            decay_end = ctx["epochs"]
-
-        start = float(start)
-        end = float(end)
-        decay_end = max(1, int(decay_end))
-
-        if epoch >= decay_end:
-            return end
-
-        span = max(1, decay_end - 1)
-        progress = max(0.0, min(1.0, (epoch - 1) / span))
-        return float(start + progress * (end - start))
 
     for epoch in range(1, ctx["epochs"] + 1):
         epoch_start = time.perf_counter()
@@ -293,6 +215,106 @@ def main():
 
     # ---------------------
 
+
+def _compute_alpha(ctx: dict, epoch: int) -> float:
+    """Epoch-wise KD alpha schedule: CE-heavy warmup then linear to target
+
+    Optional context keys (if present in config):
+        - kd_alpha_start
+        - kd_alpha_end
+        - kd_alpha_warmup_epochs
+        - kd_alpha_decay_end_epoch
+        - kd_alpha_constant
+
+    Defaults if constant flag not set:
+        start=0.9, end=ctx["kd_alpha"], warmup=5, decay_end=ctx["epochs"].
+    """
+
+    # Don't change alpha if constant flag set
+    if ctx.get("kd_alpha_constant"):
+        return float(ctx["kd_alpha"])
+    
+    total_epochs = ctx["epochs"]
+    start = ctx.get("kd_alpha_start", None)
+    end = ctx.get("kd_alpha_end", None)
+    if start is None:
+        start = 0.9
+    if end is None:
+        end = ctx["kd_alpha"]
+    warmup = ctx.get("kd_alpha_warmup_epochs", None)
+    if warmup is None:
+        warmup = 5
+    decay_end = ctx.get("kd_alpha_decay_end_epoch", None)
+    if decay_end is None:
+        decay_end = total_epochs
+
+    # Clamp and cast
+    warmup = max(0, int(warmup))
+    decay_end = max(warmup + 1, int(decay_end))
+    epoch = int(epoch)
+
+    if warmup > 0 and epoch <= warmup:
+        return float(start)
+
+    if epoch >= decay_end:
+        return float(end)
+
+    # Linear decay from start -> end between warmup+1 and decay_end
+    span = max(1, decay_end - warmup)
+    t = (epoch - warmup) / span
+    return float(start + t * (end - start))
+
+
+def _compute_margin_weight(ctx: dict, epoch: int) -> float:
+    """Optional schedule for margin loss weight"""
+
+    base = float(ctx.get("kd_margin_weight", 0.0))
+    start = ctx.get("kd_margin_weight_start")
+    end = ctx.get("kd_margin_weight_end")
+    decay_end = ctx.get("kd_margin_decay_end_epoch")
+
+    # If no schedule provided fall back to constant weight
+    if start is None and end is None and decay_end is None:
+        return base
+
+    if start is None:
+        start = base
+    if end is None:
+        end = base
+    if decay_end is None:
+        decay_end = ctx["epochs"]
+
+    start = float(start)
+    end = float(end)
+    decay_end = max(1, int(decay_end))
+
+    if epoch >= decay_end:
+        return end
+
+    span = max(1, decay_end - 1)
+    progress = max(0.0, min(1.0, (epoch - 1) / span))
+    return float(start + progress * (end - start))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    default_config = Path("src") / "config" / "student_mbv3s_vww96.yaml"
+
+    parser.add_argument(
+        "--config_path",
+        type=Path,
+        default=default_config,
+        help="Path to kd YAML config"
+    )
+    parser.add_argument(
+        "--debug",
+        required=False,
+        type=bool,
+        default=False
+    )
+    args = parser.parse_args()
+
+    run_distillation(args)
 
 if __name__ == "__main__":
     main()

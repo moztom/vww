@@ -1,3 +1,13 @@
+"""
+Training script for binary image classification on the VWW dataset
+Used to train baseline and teacher models
+
+Default config: src/config/baseline_mbv3s_vww96.yaml
+
+Example usage: python -m src.train
+
+"""
+
 import argparse, time, json
 from pathlib import Path
 import numpy as np
@@ -12,16 +22,8 @@ from src.engine.ema import ModelEMA
 from src.engine.finetune_utils import set_backbone_trainable, recalibrate_batch_norm
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument(
-        "--config_path", required=True, type=Path, help="Path to config file (.yaml)"
-    )
-    ap.add_argument("--debug", required=False, type=bool, default=False)
-    args = ap.parse_args()
-
+def run_training(args: argparse.Namespace):
     ctx = build_context(args.config_path)
-
     if args.debug == True:
         print("Config load complete:")
         print(ctx)
@@ -209,6 +211,21 @@ def main():
     ctx["writer"].flush()
     ctx["writer"].close()
 
+
+def main():
+    ap = argparse.ArgumentParser()
+    default_config = Path("src") / "config" / "baseline_mbv3s_vww96.yaml"
+
+    ap.add_argument(
+        "--config_path",
+        type=Path,
+        default=default_config,
+        help="Path to YAML config file"
+    )
+    ap.add_argument("--debug", required=False, type=bool, default=False)
+    args = ap.parse_args()
+
+    run_training(args)
 
 if __name__ == "__main__":
     main()

@@ -3,9 +3,7 @@ runs/
 exports/
 results/
 data/
-*.mlmodel
-*.onnx
-*.tflite
+coreml_models/
 Pipfile.lock
 .DS_Store
 Untracked/

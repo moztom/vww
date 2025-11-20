@@ -1,5 +1,8 @@
-#!/usr/bin/env python3
-"""Summarise JPEG image dimensions across COCO folders."""
+"""
+Summarise JPEG dimensions in the COCO train2017 and val2017 folders
+
+Usage: python scripts/get_dataset_stats.py
+"""
 
 from __future__ import annotations
 
@@ -109,7 +112,7 @@ def print_summary(label: str, stats: dict) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Summarise JPEG dimensions in the COCO train2017 and val2017 folders.")
+    parser = argparse.ArgumentParser()
     parser.add_argument(
         "--folders",
         nargs="*",

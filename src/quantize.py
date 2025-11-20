@@ -1,3 +1,11 @@
+"""
+Quantize a trained model (PTQ or QAT)
+
+Default config: src/config/student_mbv3s_vww96_quant.yaml
+
+Example usage: python -m src.quantize
+"""
+
 import argparse
 import json
 import time
@@ -9,21 +17,10 @@ from src.engine.utils import compute_model_complexity
 from src.engine.quantization import run_quantization
 
 
-def _append_metrics(run_dir: Path, payload: dict) -> None:
-    path = Path(run_dir) / "metrics.jsonl"
-    with open(path, "a") as fh:
-        fh.write(json.dumps(payload) + "\n")
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Quantize a trained student model (PTQ or QAT).")
-    parser.add_argument("--config_path", type=Path, required=True, help="Path to quantization YAML config.")
-    args = parser.parse_args()
-
+def run_quantization(args: argparse.Namespace):
     ctx = build_context(args.config_path, stage="quant")
     run_dir = ctx["run_dir"]
 
-    '''
     print("Evaluating FP32 baseline before quantization...")
     baseline_start = time.perf_counter()
     base_loss, base_acc, *_ = evaluate(ctx["model"], ctx["val_loader"], ctx["device"])
@@ -40,8 +37,6 @@ def main():
         )
     else:
         params = macs = None
-    
-    '''
 
     summary = run_quantization(ctx)
 
@@ -49,7 +44,6 @@ def main():
     print(f"INT8 accuracy: {summary['val_acc']:.4f} | loss {summary['val_loss']:.4f}")
     print(f"Saved quantized weights to:\n  - {summary['state_dict_path']}\n  - {summary['full_model_path']}")
 
-    '''
     _append_metrics(run_dir, {
         "tag": "baseline_fp32",
         "val_acc": base_acc,
@@ -58,7 +52,6 @@ def main():
         "param_count": params,
         "macs": macs,
     })
-    '''
     _append_metrics(run_dir, {
         "tag": f"quant_{summary['mode']}",
         **summary,
@@ -69,6 +62,26 @@ def main():
         writer.flush()
         writer.close()
 
+
+def _append_metrics(run_dir: Path, payload: dict) -> None:
+    path = Path(run_dir) / "metrics.jsonl"
+    with open(path, "a") as fh:
+        fh.write(json.dumps(payload) + "\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Quantize a trained student model (PTQ or QAT).")
+    default_config = Path("src") / "config" / "student_mbv3s_vww96_quant.yaml"
+
+    parser.add_argument(
+        "--config_path",
+        type=Path,
+        default=default_config,
+        help="Path to quantization YAML config."
+        )
+    args = parser.parse_args()
+
+    run_quantization(args)
 
 if __name__ == "__main__":
     main()

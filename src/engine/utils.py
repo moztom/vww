@@ -1,3 +1,4 @@
+import copy
 import os
 import random, time, platform, subprocess, json
 from pathlib import Path
@@ -23,15 +24,6 @@ def set_seed(seed=42):
 
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
-
-        # cuBLAS requires this environment variable for deterministic matmul
-        # os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
-        # info["cublas_workspace_config"] = os.environ.get("CUBLAS_WORKSPACE_CONFIG")
-
-        #torch.backends.cudnn.benchmark = False
-        #torch.backends.cudnn.deterministic = True
-        #info["cudnn_benchmark"] = torch.backends.cudnn.benchmark
-        #info["cudnn_deterministic"] = torch.backends.cudnn.deterministic
 
     if hasattr(torch.backends, "cudnn") and torch.backends.cudnn.is_available():
         torch.backends.cudnn.benchmark = False
@@ -95,7 +87,7 @@ def log_epoch(
     margin=None,
     margin_weight=None,
 ):
-    """ Log epoch metrics to TensorBoard and JSONL file """
+    """Log epoch metrics to TensorBoard and JSONL file"""
 
     writer.add_scalar("train loss", float(tr_loss), epoch)
     if ce is not None:
@@ -140,7 +132,7 @@ def _try_cmd(cmd):
 
 
 def _peek_example(loader) -> Optional[torch.Tensor]:
-    """ Return a single example tensor from a DataLoader on CPU """
+    """Return a single example tensor from a DataLoader on CPU"""
 
     iterator = iter(loader)
     try:
@@ -159,7 +151,7 @@ def compute_model_complexity(
     model: torch.nn.Module,
     loader=None,
 ) -> Optional[Dict[str, int]]:
-    """ Compute parameter count and MACs for a model """
+    """Compute parameter count and MACs for a model"""
 
     example_input = _peek_example(loader)
 
@@ -169,10 +161,10 @@ def compute_model_complexity(
     example_input = example_input.to("cpu")
 
     try:
-        model.to("cpu")
-        model.eval()
+        model_cpu = copy.deepcopy(model).to("cpu")
+        model_cpu.eval()
         with torch.no_grad():
-            macs, params = profile(model, inputs=(example_input,), verbose=False)
+            macs, params = profile(model_cpu, inputs=(example_input,), verbose=False)
     except Exception:
         return None
 

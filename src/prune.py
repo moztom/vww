@@ -1,3 +1,11 @@
+"""
+Iterative structured pruning for MobileNetV3-S
+
+Default config: src/config/student_mbv3s_vww96_prune.yaml
+
+Example usage: python -m src.prune
+"""
+
 import argparse
 import json
 import time
@@ -15,52 +23,9 @@ from src.engine.pruning import MobilenetV3ChannelPruner, ChannelScore
 from src.engine.finetune_utils import recalibrate_batch_norm
 
 
-def _ensure_targets(cfg: Dict, override: Optional[List[float]]) -> List[float]:
-    if override:
-        return sorted(override)
-    targets = cfg.get("targets")
-    if not targets:
-        raise ValueError("Pruning targets not specified. Provide prune.targets or --targets.")
-    ordered = sorted(float(t) for t in targets)
-    if ordered != list(targets):
-        print(f"Targets reordered to ascending: {ordered}")
-    return ordered
-
-
-def _lr_for_target(cfg: Dict, target: float) -> float:
-    lr = float(cfg.get("lr", 1e-4))
-    high = cfg.get("lr_high")
-    if high is not None:
-        threshold = float(cfg.get("lr_high_threshold", 0.3))
-        if target >= threshold:
-            lr = float(high)
-    return lr
-
-
-def _save_json(path: Path, payload: Dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as fh:
-        json.dump(payload, fh, indent=2)
-
-
-def _serialize_plan(plan_per_block: Dict[int, Dict[str, object]]) -> Dict[str, Dict[str, object]]:
-    serialized = {}
-    for block_idx, info in plan_per_block.items():
-        serialized[str(block_idx)] = {
-            "removed_channels": info.get("removed_channels", []),
-            "remaining": info.get("remaining"),
-        }
-    return serialized
-
-
-def _format_fraction(frac: float) -> str:
-    return f"{frac * 100:.1f}%"
-
-
 def run_pruning(args: argparse.Namespace) -> None:
     ctx = build_context(args.config_path, stage="prune")
-    config = ctx["config"]
-    prune_cfg = ctx.get("prune_cfg") or config.get("prune") or {}
+    prune_cfg = ctx.get("prune_cfg")
     if not prune_cfg:
         raise ValueError("Missing prune configuration. Add a prune section to the YAML config.")
 
@@ -73,7 +38,7 @@ def run_pruning(args: argparse.Namespace) -> None:
     finetune_cfg = prune_cfg.get("finetune", {})
     acceptance_cfg = prune_cfg.get("acceptance", {})
 
-    targets = _ensure_targets(prune_cfg, args.targets)
+    targets = sorted(float(t) for t in prune_cfg.get("targets"))
     importance = prune_cfg.get("importance", "bn_gamma")
     protect_cfg = prune_cfg.get("protect", {})
     expand_only = bool(prune_cfg.get("expand_only", True))
@@ -119,7 +84,6 @@ def run_pruning(args: argparse.Namespace) -> None:
     torch.save({"model": model}, base_checkpoint_full)
 
     complexity = compute_model_complexity(model, ctx["val_loader"])
-    model.to(device)
     if complexity:
         params = complexity["param_count"]
         macs = complexity["macs"]
@@ -127,6 +91,15 @@ def run_pruning(args: argparse.Namespace) -> None:
             f"Baseline complexity: params={params:,} ({params/1e6:.2f}M) | "
             f"MACs={macs:,} ({macs/1e6:.2f}M)"
         )
+        model_size_bytes = sum(p.nelement() * p.element_size() for p in model.parameters())
+        model_size_bytes += sum(b.nelement() * b.element_size() for b in model.buffers())
+        model_size_mb = model_size_bytes / (1024 ** 2)
+        with open(run_dir / "metrics.jsonl", "a") as file:
+            file.write(json.dumps({
+                "Baseline params": f"{params:,} ({params/1e6:.2f}M)",
+                "Basleine MACs": f"{macs:,} ({macs/1e6:.2f}M)",
+                "Baseline model size": f"{model_size_bytes:,} bytes ({model_size_mb:.2f} MB)",
+            }) + "\n")
 
     prev_best_acc = base_acc
     global_epoch = 0
@@ -183,9 +156,6 @@ def run_pruning(args: argparse.Namespace) -> None:
                     confidence_gamma=confidence_gamma,
                     margin_weight=margin_weight,
                 )
-                ce_component = tr_ce
-                kl_component = tr_kl
-                margin_component = tr_margin
             else:
                 tr_loss, tr_acc = train_one_epoch(
                     model,
@@ -196,9 +166,6 @@ def run_pruning(args: argparse.Namespace) -> None:
                     scheduler,
                     grad_clip,
                 )
-                ce_component = None
-                kl_component = None
-                margin_component = None
 
             va_loss, va_acc, *_ = evaluate(model, ctx["val_loader"], device)
             elapsed = time.perf_counter() - epoch_start
@@ -212,10 +179,10 @@ def run_pruning(args: argparse.Namespace) -> None:
                 va_loss,
                 va_acc,
                 optimizer.param_groups[0]["lr"],
-                ce=ce_component,
-                kl=kl_component,
+                ce=tr_ce if tr_ce else None,
+                kl=tr_kl if tr_kl else None,
                 alpha=alpha if use_kd else None,
-                margin=margin_component,
+                margin=tr_margin if tr_margin else None,
                 margin_weight=margin_weight if use_kd else None,
             )
 
@@ -250,6 +217,26 @@ def run_pruning(args: argparse.Namespace) -> None:
             f"final eval {final_va_acc:.4f}"
         )
 
+        complexity = compute_model_complexity(model, ctx["val_loader"])
+        params = complexity["param_count"]
+        macs = complexity["macs"]
+        model_size_bytes = sum(p.nelement() * p.element_size() for p in model.parameters())
+        model_size_bytes += sum(b.nelement() * b.element_size() for b in model.buffers())
+        model_size_mb = model_size_bytes / (1024 ** 2)
+        print(
+            "Step complexity: "
+            f"params={params:,} ({params/1e6:.2f}M), "
+            f"MACs={macs:,} ({macs/1e6:.2f}M), "
+            f"model size={model_size_bytes:,} bytes ({model_size_mb:.2f} MB)"
+        )
+        with open(run_dir / "metrics.jsonl", "a") as file:
+            file.write(json.dumps({
+                "Target completed": target,
+                "Step params": f"{params:,} ({params/1e6:.2f}M)",
+                "Step MACs": f"{macs:,} ({macs/1e6:.2f}M)",
+                "Model size": f"{model_size_bytes:,} bytes ({model_size_mb:.2f} MB)",
+            }) + "\n")
+
         acceptance_msg = None
         baseline_threshold = acceptance_cfg.get("baseline_accuracy")
         max_drop = acceptance_cfg.get("max_drop_after_step")
@@ -263,20 +250,6 @@ def run_pruning(args: argparse.Namespace) -> None:
                 f"exceeds permitted {max_drop:.4f}."
             )
 
-        complexity = compute_model_complexity(model, ctx["val_loader"])
-        params = complexity["param_count"]
-        macs = complexity["macs"]
-        print(
-            f"Step complexity: params={params:,} ({params/1e6:.2f}M) | "
-            f"MACs={macs:,} ({macs/1e6:.2f}M)"
-        )
-
-        with open(run_dir / "metrics.jsonl", "a") as file:
-            file.write(json.dumps({
-                "Step params": f"{params:,} ({params/1e6:.2f}M)",
-                "Step MACs": f"{macs:,} ({macs/1e6:.2f}M)"
-            }) + "\n")
-
         model.to(device)
 
         summary = {
@@ -288,8 +261,9 @@ def run_pruning(args: argparse.Namespace) -> None:
             "best_recovery_accuracy": best_step_acc,
             "best_recovery_epoch": best_epoch,
             "learning_rate": finetune_lr,
-            "per_block": _serialize_plan(plan_per_block),
             "complexity": complexity,
+            "model size": {"bytes": model_size_bytes, "MB": model_size_mb},
+            "per_block": _serialize_plan(plan_per_block),
             "acceptance_message": acceptance_msg,
         }
         summary_path = run_dir / f"prune_step_{int(round(target * 100))}.json"
@@ -306,22 +280,49 @@ def run_pruning(args: argparse.Namespace) -> None:
         writer.close()
 
 
+def _lr_for_target(cfg: Dict, target: float) -> float:
+    lr = float(cfg.get("lr", 1e-4))
+    high = cfg.get("lr_high")
+    if high is not None:
+        threshold = float(cfg.get("lr_high_threshold", 0.3))
+        if target >= threshold:
+            lr = float(high)
+    return lr
+
+
+def _save_json(path: Path, payload: Dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as fh:
+        json.dump(payload, fh, indent=2)
+
+
+def _serialize_plan(plan_per_block: Dict[int, Dict[str, object]]) -> Dict[str, Dict[str, object]]:
+    serialized = {}
+    for block_idx, info in plan_per_block.items():
+        serialized[str(block_idx)] = {
+            "removed_channels": info.get("removed_channels", []),
+            "remaining": info.get("remaining"),
+        }
+    return serialized
+
+
+def _format_fraction(frac: float) -> str:
+    return f"{frac * 100:.1f}%"
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Iterative structured pruning for MobileNetV3-S.")
-    parser.add_argument("--config_path", type=Path, required=True, help="Path to YAML config.")
+    parser = argparse.ArgumentParser()
+    default_config = Path("src") / "config" / "student_mbv3s_vww96_prune.yaml"
+
     parser.add_argument(
-        "--targets",
-        type=float,
-        nargs="+",
-        default=None,
-        help="Override prune targets (fractions, e.g. 0.1 0.2).",
-    )
-    parser.add_argument("--debug", action="store_true", help="Unused placeholder for symmetry with other scripts.")
-    # ? ^
+        "--config_path",
+        type=Path,
+        default=default_config,
+        help="Path to pruning YAML config."
+        )
     args = parser.parse_args()
 
     run_pruning(args)
-
 
 if __name__ == "__main__":
     main()

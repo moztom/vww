@@ -34,6 +34,7 @@ def _load_config(config_path: Path) -> dict:
 
 
 def _extract_model_from_checkpoint(ckpt_path: Path) -> Tuple[Optional[torch.nn.Module], Optional[dict]]:
+    """Extracts a model or state dict from a checkpoint file."""
     obj = torch.load(ckpt_path, map_location="cpu", weights_only=False)
 
     module = None
@@ -68,6 +69,7 @@ def _extract_model_from_checkpoint(ckpt_path: Path) -> Tuple[Optional[torch.nn.M
 
 
 def _is_fx_graph_module(module: torch.nn.Module) -> bool:
+    """Check if a module is a torch.fx GraphModule."""
     cls = module.__class__
     module_name = getattr(cls, "__module__", "")
     name = getattr(cls, "__name__", "")
@@ -81,6 +83,7 @@ def _is_fx_graph_module(module: torch.nn.Module) -> bool:
 
 
 def _build_model_from_state(cfg: dict, state_dict: dict) -> torch.nn.Module:
+    """Builds a model from config and loads the provided state dict."""
     model_cfg = cfg.get("model") or {}
     model_type = model_cfg.get("type")
     if not model_type:
@@ -94,6 +97,7 @@ def _build_model_from_state(cfg: dict, state_dict: dict) -> torch.nn.Module:
 
 
 def _load_model(config_path: Path, ckpt_path: Path) -> torch.nn.Module:
+    """Loads a model from config and checkpoint paths."""
     cfg = _load_config(config_path)
     module, state_dict = _extract_model_from_checkpoint(ckpt_path)
 
@@ -119,8 +123,9 @@ def main():
     parser.add_argument("--input_height", type=int, default=96, help="Input tensor height. Default: 96.")
     parser.add_argument("--input_width", type=int, default=96, help="Input tensor width. Default: 96.")
     parser.add_argument("--batch_size", type=int, default=1, help="Batch dimension for the exported model input. Default: 1.")
-    parser.add_argument("--fp16", action="store_true", help="Convert Core ML weights to FP16.")
     args = parser.parse_args()
+
+
 
     config_path = args.config_path.expanduser()
     ckpt_path = args.ckpt_path.expanduser()
@@ -133,13 +138,16 @@ def main():
 
     model = _load_model(config_path, ckpt_path)
 
+    # Create example input
     height, width = args.input_height, args.input_width
     example_input = torch.randn(args.batch_size, 3, height, width, device="cpu")
 
+    # Trace the model with example input
     with torch.inference_mode():
         traced = torch.jit.trace(model, example_input)
         traced.eval()
 
+    # Convert to Core ML
     mlmodel = ct.convert(
         traced,
         inputs=[
@@ -148,11 +156,13 @@ def main():
                 shape=example_input.shape,
             )
         ],
+        outputs=[
+            ct.TensorType(
+                name="output",
+            )
+        ],
         compute_units=ct.ComputeUnit.ALL,
     )
-
-    if args.fp16:
-        mlmodel = ct.utils.convert_neural_network_weights_to_fp16(mlmodel)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     mlmodel.save(output_path)

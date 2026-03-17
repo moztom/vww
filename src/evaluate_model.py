@@ -26,7 +26,9 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
     checkpt = torch.load(args.model_path, map_location="cpu")
-    model.load_state_dict(checkpt, strict=True)
+    if isinstance(checkpt, dict) and "model" in checkpt:
+        checkpt = checkpt["model"]
+    model.load_state_dict(checkpt)
     model.to(device)
 
     val_loader = build_dataloaders(args.data_path, args.batch_size, eval_only=True)

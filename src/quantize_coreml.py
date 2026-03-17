@@ -2,7 +2,7 @@
 int8 quantize a coreml model
 
 Example usage:
-python scripts/coreml/quantize_coreml.py --input_path coreml_models/pruned_fp32.mlpackage --output_path coreml_models/pruned_int8.mlpackage
+python -m src.quantize_coreml --input_path coreml_models/pruned_fp32.mlpackage --output_path coreml_models/pruned_int8.mlpackage
 """
 
 import argparse

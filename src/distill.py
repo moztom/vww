@@ -48,8 +48,8 @@ def run_distillation(args: argparse.Namespace):
 
     for epoch in range(1, ctx["epochs"] + 1):
         epoch_start = time.perf_counter()
-        epoch_alpha = _compute_alpha(epoch)
-        epoch_margin = _compute_margin_weight(epoch)
+        epoch_alpha = _compute_alpha(ctx, epoch)
+        epoch_margin = _compute_margin_weight(ctx, epoch)
 
         tr_loss, tr_acc, tr_ce, tr_kl, tr_margin = kd_train_one_epoch(
             ctx["model"],

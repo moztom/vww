@@ -25,7 +25,7 @@ train:
     label_smoothing: 0.0
     early_stop_patience: 10
     grad_clip_norm: 2.0
-    ema_decay: 0.999 # don't use
+    ema_decay:
     optimizer:
         name: 'adamw'
         lr: 0.0007
@@ -39,7 +39,7 @@ train:
 
 kd:
     teacher:
-        checkpt: 'saved_runs\2025-10-26_17-53-08_teacher_mbv3l_vww96\model.pt'
+        checkpt: 'saved_runs/2025-10-26_17-53-08_teacher_mbv3l_vww96/model.pt'
         arch: 'mobilenet_v3_large'
         pretrained: true
     alpha: 0.55

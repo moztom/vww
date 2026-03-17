@@ -366,6 +366,11 @@ def _save_quantized_model(model: torch.nn.Module, run_dir: Path, suffix: str) ->
         torch.save(model, full_path)
     except Exception as exc:
         warnings.warn(f"Skipping full-model save for {suffix}: {exc}")
+        if full_path.exists():
+            try:
+                full_path.unlink()
+            except Exception:
+                pass
         full_path = None
     return state_path, full_path
 

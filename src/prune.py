@@ -7,6 +7,7 @@ Example usage: python -m src.prune
 """
 
 import argparse
+import copy
 import json
 import time
 from pathlib import Path
@@ -21,6 +22,26 @@ from src.engine.train_loops import evaluate, train_one_epoch
 from src.engine.kd import kd_train_one_epoch
 from src.engine.pruning import MobilenetV3ChannelPruner, ChannelScore
 from src.engine.finetune_utils import recalibrate_batch_norm
+
+
+def _strip_thop_stats(model: torch.nn.Module) -> None:
+    """Remove THOP-added buffers/attributes to keep checkpoints clean and fp32-only."""
+    for module in model.modules():
+        for name in ("total_ops", "total_params"):
+            if name in getattr(module, "_buffers", {}):
+                module._buffers.pop(name, None)
+            if hasattr(module, name):
+                try:
+                    delattr(module, name)
+                except Exception:
+                    pass
+
+
+def _prepare_for_save(model: torch.nn.Module) -> torch.nn.Module:
+    """Return a CPU, float32, THOP-clean copy for checkpointing."""
+    clone = copy.deepcopy(model).float().cpu()
+    _strip_thop_stats(clone)
+    return clone
 
 
 def run_pruning(args: argparse.Namespace) -> None:
@@ -81,7 +102,7 @@ def run_pruning(args: argparse.Namespace) -> None:
     baseline_time = time.perf_counter() - baseline_start
     print(f"Baseline accuracy: {base_acc:.4f} (eval {baseline_time:.1f}s)")
     base_checkpoint_full = run_dir / "model_pruned_base_full.pt"
-    torch.save({"model": model}, base_checkpoint_full)
+    torch.save({"model": _prepare_for_save(model)}, base_checkpoint_full)
 
     complexity = compute_model_complexity(model, ctx["val_loader"])
     if complexity:
@@ -197,7 +218,7 @@ def run_pruning(args: argparse.Namespace) -> None:
                 best_step_acc = va_acc
                 best_step_loss = va_loss
                 best_epoch = epoch
-                torch.save({"model": model}, step_checkpoint_full)
+                torch.save({"model": _prepare_for_save(model)}, step_checkpoint_full)
                 patience = 0
             else:
                 patience += 1

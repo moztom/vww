@@ -1,56 +1,36 @@
 """
-int8 quantize a coreml model
+Weight-only post-training quantization for a Core ML model from a YAML config.
+
+Default config: src/config/quantize_coreml_int8.yaml
 
 Example usage:
-python -m src.quantize_coreml --input_path coreml_models/pruned_fp32.mlpackage --output_path coreml_models/pruned_int8.mlpackage
+python -m src.quantize_coreml
 """
 
 import argparse
 from pathlib import Path
 
-import coremltools as ct
-import coremltools.optimize as cto
+from src.engine.quantization import run_coreml_quantization
 
 
-def quantize_to_int8(input_path: str, output_path: str):
-    #input_path = Path(input_path)
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    print(f"Loading Core ML model from {input_path}")
-    mlmodel = ct.models.MLModel(input_path)
-
-    # Config: 8-bit linear symmetric weight quantization (no activations).
-    # This is weight-only PTQ; activations stay fp16/fp32.
-    config = cto.coreml.OptimizationConfig(
-        global_config=cto.coreml.OpLinearQuantizerConfig(
-            mode="linear_symmetric",  # or "linear" if you prefer
-            dtype="int8",
-        )
-    )
-
-    print("Applying 8-bit linear symmetric weight quantization...")
-    quantized_model = cto.coreml.linear_quantize_weights(mlmodel, config)
-
-    # For ML Program models, extension should be .mlpackage
-    if output_path.suffix != ".mlpackage":
-        print(
-            f"Note: changing extension from {output_path.suffix} "
-            f"to .mlpackage for ML Program model."
-        )
-        output_path = output_path.with_suffix(".mlpackage")
-
-    quantized_model.save(output_path)
-    print(f"Saved quantized model to {output_path}")
+def run_quantization(args: argparse.Namespace) -> None:
+    run_coreml_quantization(args.config_path)
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input_path", required=True)
-    parser.add_argument("--output_path", required=True)
+    parser = argparse.ArgumentParser(
+        description="Apply weight-only Core ML quantization from a YAML config."
+    )
+    default_config = Path("src") / "config" / "quantize_coreml_int8.yaml"
+    parser.add_argument(
+        "--config_path",
+        type=Path,
+        default=default_config,
+        help="Path to the Core ML quantization YAML config.",
+    )
     args = parser.parse_args()
 
-    quantize_to_int8(args.input_path, args.output_path)
+    run_quantization(args)
 
 
 if __name__ == "__main__":

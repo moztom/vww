@@ -11,7 +11,7 @@ from src.engine.data import build_dataloaders
 from src.engine.models import build_model
 
 
-def build_context(config_path: Path, stage: str = None):
+def build_context(config_path: Path, stage: str = None) -> dict:
     """Build training context from config file"""
 
     # load config
@@ -126,18 +126,18 @@ def build_context(config_path: Path, stage: str = None):
     return context
 
 
-def _load_config(path: Path):
+def _load_config(path: Path) -> dict:
     """Load and validate YAML config file"""
     with open(path, "r") as file:
         config = yaml.safe_load(file)
 
     for key in ["meta", "data", "model", "train"]:
-        assert key in config, f"Missing top-level '{key}' in {path}"
+        assert key in config, f"Missing '{key}' in {path}"
 
     return config
 
 
-def _pick_device(name: str):
+def _pick_device(name: str) -> str:
     """Pick device based on config string"""
     if name == "auto":
         return (
@@ -149,7 +149,7 @@ def _pick_device(name: str):
     return name
 
 
-def _make_optimizer(cfg, model):
+def _make_optimizer(cfg, model) -> torch.optim.Optimizer:
     """Create optimizer based on config"""
     if cfg["train"]["optimizer"]["name"] == "adamw":
         optimizer = AdamW(
@@ -163,7 +163,7 @@ def _make_optimizer(cfg, model):
     return optimizer
 
 
-def _make_scheduler(cfg, optimizer, tr_loader):
+def _make_scheduler(cfg, optimizer, tr_loader) -> torch.optim.lr_scheduler._LRScheduler:
     """Create scheduler based on config"""
     if cfg["train"]["scheduler"]["name"] == "onecycle":
         scheduler = OneCycleLR(

@@ -3,7 +3,8 @@ Iterative structured pruning for MobileNetV3-S
 
 Default config: src/config/student_mbv3s_vww96_prune.yaml
 
-Example usage: python -m src.prune
+Example usage:
+python -m src.prune
 """
 
 import argparse

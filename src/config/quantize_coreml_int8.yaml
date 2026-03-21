@@ -1,0 +1,18 @@
+meta:
+    name: 'quantize_coreml_int8'
+
+coreml_quant:
+    input_path: 'coreml_models/pruned_fp32_clean.mlpackage'
+    output_path: 'coreml_models/quantized_int8_test.mlpackage'
+    mode: 'linear_symmetric'
+    dtype: 'int8'
+
+eval:
+    enabled: true
+    data_path: 'data/vww96'
+    batch_size: 1
+    num_workers: 4
+    cpu_only: true
+    save_cm_plot: true
+    cm_normalize: true
+    save_per_class_metrics: true

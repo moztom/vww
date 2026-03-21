@@ -14,7 +14,7 @@ python -m src.evaluate_coreml_model --model_path coreml_models/pruned_fp32.mlpac
 # quantized (int8 weights, still float inputs)
 python -m src.evaluate_coreml_model --model_path coreml_models/pruned_int8.mlpackage --data_path data/vww96 --cpu_only
 
-# optional confusion matrix figure + per-class metrics CSV/LaTeX
+# optional confusion matrix figure + per-class metrics CSV
 python -m src.evaluate_coreml_model --model_path coreml_models/baseline_fp32.mlpackage --data_path data/vww96 \
   --save_cm_plot --cm_normalize \
   --save_per_class_metrics
@@ -164,61 +164,25 @@ def _write_per_class_csv(
             )
 
 
-def _write_per_class_latex_rows(
-    model_tag: str,
-    rows: List[Dict[str, object]],
-    out_path: Path,
-) -> None:
-    """
-    Write LaTeX table rows (no header/tabular env) for easy copy/paste.
-    Format: Model & Class & Precision & Recall & F1 \\\\
-    """
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with out_path.open("w") as fh:
-        for row in rows:
-            fh.write(
-                f"{model_tag} & {row['class']} & {row['precision']:.4f} & "
-                f"{row['recall']:.4f} & {row['f1']:.4f} \\\\\n"
-            )
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Evaluate a Core ML .mlpackage model on the VWW val set.")
-    parser.add_argument("--model_path", type=Path, required=True, help="Path to the Core ML .mlpackage file.")
-    parser.add_argument("--data_path", type=Path, required=True, help="Dataset root containing val/0 and val/1 folders (e.g., data/vww96).")
-    parser.add_argument("--batch_size", type=int, default=1, help="Batch size for evaluation. Must match the batch dimension used during export.")
-    parser.add_argument("--num_workers", type=int, default=4, help="Number of dataloader workers.")
-    parser.add_argument(
-        "--cpu_only",
-        action="store_true",
-        help="If set, force Core ML evaluation to use CPU only.",
-    )
-    parser.add_argument(
-        "--save_cm_plot",
-        action="store_true",
-        help="If set, save a confusion matrix figure (PDF/PNG based on output suffix).",
-    )
-    parser.add_argument(
-        "--cm_normalize",
-        action="store_true",
-        help="If set, normalize the confusion matrix over all entries before plotting.",
-    )
-    parser.add_argument(
-        "--save_per_class_metrics",
-        action="store_true",
-        help="If set, export per-class precision/recall/F1 as CSV and LaTeX rows.",
-    )
-    args = parser.parse_args()
-
-    model_path = args.model_path.expanduser()
-    data_path = args.data_path.expanduser()
+def evaluate_coreml_model(
+    model_path: Path,
+    data_path: Path,
+    batch_size: int = 1,
+    num_workers: int = 4,
+    cpu_only: bool = False,
+    save_cm_plot: bool = False,
+    cm_normalize: bool = False,
+    save_per_class_metrics: bool = False,
+) -> Dict[str, object]:
+    model_path = model_path.expanduser()
+    data_path = data_path.expanduser()
 
     if not model_path.exists():
         raise FileNotFoundError(f"Model not found: {model_path}")
     if not data_path.exists():
         raise FileNotFoundError(f"Data path not found: {data_path}")
 
-    if args.cpu_only:
+    if cpu_only:
         mlmodel = ct.models.MLModel(str(model_path), compute_units=ct.ComputeUnit.CPU_ONLY)
     else:
         mlmodel = ct.models.MLModel(str(model_path))
@@ -226,8 +190,8 @@ def main():
 
     val_loader = build_dataloaders(
         data_path=data_path,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
+        batch_size=batch_size,
+        num_workers=num_workers,
         eval_only=True,
     )
 
@@ -265,45 +229,88 @@ def main():
     print(cm)
     print(cls_report_text)
 
-    metrics_path = model_path.parent / f"{model_path.stem}_coreml_eval_metrics.json"
+    metrics_payload = {
+        "model_path": str(model_path),
+        "data_path": str(data_path),
+        "val_acc": acc,
+        "confusion_matrix": cm.tolist(),
+        "classification_report": cls_report_dict,
+        "num_samples": int(len(gts_arr)),
+        "batch_size": batch_size,
+        "cpu_only": cpu_only,
+        "input_name": input_name,
+        "output_name": output_name,
+    }
+
+    metrics_path = model_path.parent / f"{model_path.stem}_metrics.json"
     metrics_path.parent.mkdir(parents=True, exist_ok=True)
 
     with metrics_path.open("w") as fh:
-        json.dump(
-            {
-                "model_path": str(model_path),
-                "data_path": str(data_path),
-                "val_acc": acc,
-                "confusion_matrix": cm.tolist(),
-                "classification_report": cls_report_dict,
-                "num_samples": int(len(gts_arr)),
-                "batch_size": args.batch_size,
-                "cpu_only": args.cpu_only,
-                "input_name": input_name,
-                "output_name": output_name,
-            },
-            fh,
-            indent=2,
-        )
+        json.dump(metrics_payload, fh, indent=2)
     print(f"Saved detailed metrics to {metrics_path}")
 
     model_tag = model_path.stem
+    cm_out = None
+    csv_out = None
 
-    if args.save_cm_plot:
+    if save_cm_plot:
         cm_out = Path(__file__).resolve().parents[1] / "figures" / f"{model_path.stem}_cm.pdf"
-        _save_confusion_matrix_plot(cm=cm, class_names=target_names, out_path=cm_out, normalize=args.cm_normalize)
-        print(f"Saved confusion matrix figure to {Path("figures") / cm_out.name}")
+        _save_confusion_matrix_plot(cm=cm, class_names=target_names, out_path=cm_out, normalize=cm_normalize)
+        print(f"Saved confusion matrix figure to {Path('figures') / cm_out.name}")
 
-    if args.save_per_class_metrics:
+    if save_per_class_metrics:
         per_class_rows = _get_per_class_metrics(cls_report_dict, class_keys=target_names)
 
-        csv_out = metrics_path.parent / f"{model_path.stem}_per_class.csv"
+        csv_out = metrics_path.parent / f"{model_path.stem}_per_class_metrics.csv"
         _write_per_class_csv(model_tag=model_tag, rows=per_class_rows, out_path=csv_out)
-        print(f"Saved per-class metrics CSV to {csv_out}")
+        print(f"Saved per-class metrics to {csv_out}")
 
-        tex_out = metrics_path.parent / f"{model_path.stem}_per_class_rows.tex"
-        _write_per_class_latex_rows(model_tag=model_tag, rows=per_class_rows, out_path=tex_out)
-        print(f"Saved per-class metrics LaTeX rows to {tex_out}")
+    return {
+        "metrics_path": metrics_path,
+        "cm_path": cm_out,
+        "per_class_csv_path": csv_out,
+        "metrics": metrics_payload,
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Evaluate a Core ML .mlpackage model on the VWW val set.")
+    parser.add_argument("--model_path", type=Path, required=True, help="Path to the Core ML .mlpackage file.")
+    parser.add_argument("--data_path", type=Path, required=True, help="Dataset root containing val/0 and val/1 folders (e.g., data/vww96).")
+    parser.add_argument("--batch_size", type=int, default=1, help="Batch size for evaluation. Must match the batch dimension used during export.")
+    parser.add_argument("--num_workers", type=int, default=4, help="Number of dataloader workers.")
+    parser.add_argument(
+        "--cpu_only",
+        action="store_true",
+        help="If set, force Core ML evaluation to use CPU only.",
+    )
+    parser.add_argument(
+        "--save_cm_plot",
+        action="store_true",
+        help="If set, save a confusion matrix figure (PDF/PNG based on output suffix).",
+    )
+    parser.add_argument(
+        "--cm_normalize",
+        action="store_true",
+        help="If set, normalize the confusion matrix over all entries before plotting.",
+    )
+    parser.add_argument(
+        "--save_per_class_metrics",
+        action="store_true",
+        help="If set, export per-class precision/recall/F1 as CSV rows.",
+    )
+    args = parser.parse_args()
+
+    evaluate_coreml_model(
+        model_path=args.model_path,
+        data_path=args.data_path,
+        batch_size=args.batch_size,
+        num_workers=args.num_workers,
+        cpu_only=args.cpu_only,
+        save_cm_plot=args.save_cm_plot,
+        cm_normalize=args.cm_normalize,
+        save_per_class_metrics=args.save_per_class_metrics,
+    )
 
 
 if __name__ == "__main__":

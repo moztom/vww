@@ -19,7 +19,6 @@ pyyaml = "*"
 tensorboard = "*"
 torch = "==2.9"
 torchvision = "==0.24"
-torchao = "==0.14.1"
 coremltools = "*"
 
 [dev-packages]

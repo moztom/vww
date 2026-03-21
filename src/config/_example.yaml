@@ -77,24 +77,3 @@ prune:
     acceptance:
         baseline_accuracy: 0.8562
         max_drop_after_step: 0.015
-
-# Only used when stage=quant
-quant:
-    mode: 'ptq' # ptq | qat
-    calibrate_split: 'val' # 'train' or 'val'
-    calibrate_batches: 512
-    ptq:
-        exclude_first_last: true
-    qat:
-        epochs: 5
-        lr: 0.00005
-        weight_decay: 0.00001
-        patience: 2
-        grad_clip_norm: 2.0
-        exclude_first_last: false
-    kd:
-        use_kd: true
-        alpha: 0.55 # override optional, fallback to top-level kd.* if omitted
-        temperature: 3.0
-        margin_weight: 0.0
-        label_smoothing: 0.0

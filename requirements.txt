@@ -77,7 +77,6 @@ tzdata==2025.2
 Werkzeug==3.1.3
 coremltools==9.0
 
-torchao==0.13.0
 
 # Windows (CUDA)
 # install with "pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu129"
@@ -90,4 +89,3 @@ torchvision==0.23.0+cu129; platform_system == "Windows"
 torch==2.9.0; platform_system == "Darwin"
 torchaudio==2.9.0; platform_system == "Darwin"
 torchvision==0.24.0; platform_system == "Darwin"
-

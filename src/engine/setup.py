@@ -36,23 +36,15 @@ def build_context(config_path: Path, stage: str = None):
     )
 
     # model
-    pruned_full_checkpoint = cfg["train"].get("init_pruned_full_checkpoint")
-    load_pruned = stage == "quant" and pruned_full_checkpoint
-    if load_pruned:
-        obj = torch.load(Path(pruned_full_checkpoint), map_location="cpu", weights_only=False)
-        if isinstance(obj, dict) and "model" in obj:
-            obj = obj["model"]
-        model = obj.to(device)
-    else:
-        model = build_model(cfg["model"]["type"], cfg["model"]["pretrained"]).to(device)
+    model = build_model(cfg["model"]["type"], cfg["model"]["pretrained"]).to(device)
 
-        # load initial checkpoint (if specified)
-        init_checkpoint = cfg["train"].get("init_checkpoint")
-        if init_checkpoint:
-            checkpt = torch.load(Path(init_checkpoint), map_location="cpu")
-            if isinstance(checkpt, dict) and "model" in checkpt:
-                checkpt = checkpt["model"]
-            model.load_state_dict(checkpt)
+    # load initial checkpoint (if specified)
+    init_checkpoint = cfg["train"].get("init_checkpoint")
+    if init_checkpoint:
+        checkpt = torch.load(Path(init_checkpoint), map_location="cpu")
+        if isinstance(checkpt, dict) and "model" in checkpt:
+            checkpt = checkpt["model"]
+        model.load_state_dict(checkpt)
 
     # criterion/loss
     criterion = CrossEntropyLoss(
@@ -91,22 +83,7 @@ def build_context(config_path: Path, stage: str = None):
         "bn_recalibrate_max_batches": cfg["train"].get("bn_recalibrate_max_batches"),
     }
 
-    quant_cfg = None
-    quant_requires_teacher = False
-    if stage == "quant":
-        quant_cfg = cfg.get("quant")
-        if not quant_cfg:
-            raise ValueError("Missing 'quant' section in config for quantization stage.")
-        context["quant_cfg"] = quant_cfg
-
-        quant_mode = str(quant_cfg.get("mode", "ptq")).lower()
-        if quant_mode not in ("ptq", "qat"):
-            raise ValueError(f"Unsupported quantization mode '{quant_mode}'. Use 'ptq' or 'qat'.")
-
-        quant_kd_cfg = quant_cfg.get("kd", {})
-        quant_requires_teacher = quant_mode == "qat" and bool(quant_kd_cfg.get("use_kd", True))
-
-    needs_teacher = stage in ("kd", "prune") or quant_requires_teacher
+    needs_teacher = stage in ("kd", "prune")
     if needs_teacher:
         kd_cfg = cfg.get("kd")
         if kd_cfg is None:

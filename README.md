@@ -1,12 +1,12 @@
 # VWW
 
-Repository for the MSc dissertation project: "Building lightweight neural networks".
+Repository for the MSc dissertation project: "Building Lightweight Neural Networks".
 
 A repeatable training, compression, and deployment pipeline for the Visual Wake Words (VWW) task.
 
 ## Setup
 
-This repo uses Python `3.12.6` and a `requirements.txt` install path.
+This repo uses Python `3.12.6`.
 
 ```bash
 python3.12 -m venv .venv
@@ -91,13 +91,13 @@ python -m src.quantize_coreml
 
 ## Repository Layout
 
-- `src/`: training, distillation, pruning, export, and evaluation code
-- `src/config/`: active experiment configs
+- `src/`: training, distillation, pruning, quantization, export, and evaluation code
+- `src/config/`: configuration files for each model variant
 - `scripts/`: dataset preparation helpers
-- `saved_runs/`: saved checkpoints and logs from the main experiments
+- `saved_runs/`: saved checkpoints and logs, used to export to Core ML
 - `coreml_models/`: exported and quantized Core ML artifacts
 
 ## Notes
 
-- `runs/` is used for newly created training runs.
+- `runs/` is used for newly created training runs, and only created when the first run is started.
 - `saved_runs/` contains the archived runs used for the dissertation experiments.

@@ -76,7 +76,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    split_dir = args.dataset_root / args.split
+    split_dir = args.dataset_path / args.split
     mean, std, image_count = compute_mean_std(
         split_dir=split_dir,
         batch_size=args.batch_size,

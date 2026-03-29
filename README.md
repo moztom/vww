@@ -50,8 +50,8 @@ python -m src.train --config_path src/config/baseline.yaml
 Train the teacher models:
 
 ```bash
-python -m src.train --config_path src/config/teacher_mbv3l_vww96.yaml
-python -m src.train --config_path src/config/teacher_mbv3l_vww224.yaml
+python -m src.train --config_path src/config/teacher_vww96.yaml
+python -m src.train --config_path src/config/teacher_vww224.yaml
 ```
 
 Train the distilled student:

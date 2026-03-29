@@ -11,7 +11,7 @@ from torchvision.ops.misc import SqueezeExcitation
 
 @dataclass
 class BlockInfo:
-    """Holds references to the submodules we need to edit inside an MBConv block."""
+    """Submodules inside an MBConv block"""
 
     index: int
     block: InvertedResidual
@@ -30,7 +30,7 @@ class BlockInfo:
     removed_history: List[int] = field(default_factory=list)
 
     def prune(self, remove_indices: Sequence[int]) -> List[int]:
-        """Physically remove channels from this block."""
+        """Remove channels from this block"""
         unique_indices = sorted(set(int(i) for i in remove_indices))
         if not unique_indices:
             return []
@@ -113,10 +113,8 @@ class BlockInfo:
         )
         self.project_conv.in_channels = len(keep_list)
         if self.project_conv.bias is not None:
-            # Bias is aligned with output channels, so no change expected
             self.project_conv.bias = nn.Parameter(self.project_conv.bias.detach().clone())
         if self.project_bn is not None:
-            # Project BN stays the same (output channels unaffected)
             pass
 
     @staticmethod
@@ -137,7 +135,7 @@ class ChannelScore:
 
 
 class MobilenetV3ChannelPruner:
-    """Utilities to perform structured channel pruning on torchvision MobileNetV3 blocks."""
+    """Structured channel pruning for MobileNetV3 blocks"""
 
     def __init__(
         self,
@@ -164,7 +162,6 @@ class MobilenetV3ChannelPruner:
         per_block_min = self.protect_cfg.get("per_block_min_channels", {})
 
         for idx, block in enumerate(self.model.features):
-            # Skip any block that isn't inverted residual, in the first n blocks, or specifically blocked
             if skip_first_n and idx < skip_first_n:
                 continue
             if keep_block_indices and idx in keep_block_indices:
@@ -172,10 +169,8 @@ class MobilenetV3ChannelPruner:
             if not isinstance(block, InvertedResidual):
                 continue
 
-            # Locate each layer inside the block
             expand_layer, expand_conv, expand_bn = self._maybe_expand(block)
             if expand_conv is None or expand_bn is None:
-                # Skip blocks without an expand conv when expand_only is requested.
                 if self.expand_only:
                     continue
             depthwise_layer, depthwise_conv, depthwise_bn, project_start = self._depthwise(block, expand_layer is not None)
@@ -287,7 +282,6 @@ class MobilenetV3ChannelPruner:
             raise RuntimeError("Project conv missing in InvertedResidual.")
 
         candidate = layers[start_idx]
-        # In configurations with SE, the project layer is at start_idx or start_idx + 1
         if isinstance(candidate, SqueezeExcitation):
             start_idx += 1
             candidate = layers[start_idx]
@@ -314,7 +308,7 @@ class MobilenetV3ChannelPruner:
         return self.removed_so_far / float(self.total_initial_prunable)
 
     def compute_scores(self, importance: str) -> List[ChannelScore]:
-        """Compute importance scores for all prunable channels."""
+        """Compute importance scores for all prunable channels"""
         metric = (importance or self.importance).lower()
         scores: List[ChannelScore] = []
         for block in self.blocks:
@@ -344,7 +338,7 @@ class MobilenetV3ChannelPruner:
         return scores
 
     def select_channels(self, target_remove: int, importance: str) -> List[ChannelScore]:
-        """Select channels to prune based on importance scores."""
+        """Select channels to prune based on importance scores"""
         if target_remove <= 0:
             return []
 
@@ -367,7 +361,7 @@ class MobilenetV3ChannelPruner:
         return chosen
 
     def apply(self, plan: Sequence[ChannelScore]) -> Dict[int, Dict[str, object]]:
-        """Apply pruning plan to the model."""
+        """Apply pruning to the model"""
         per_block: Dict[int, Dict[str, object]] = {}
         grouped: Dict[int, List[int]] = defaultdict(list)
 
@@ -396,7 +390,7 @@ class MobilenetV3ChannelPruner:
         return None
 
     def plan_for_fraction(self, target_fraction: float, importance: str) -> List[ChannelScore]:
-        """Create a pruning plan to reach the target fraction of pruned channels."""
+        """Create a pruning plan to reach the target fraction of pruned channels"""
         fraction = max(0.0, min(1.0, float(target_fraction)))
         target_total = int(round(self.total_initial_prunable * fraction))
         to_remove = target_total - self.removed_so_far

@@ -1,0 +1,46 @@
+{
+  "model_path": "coreml_models/student/student.mlpackage",
+  "data_path": "data/vww96",
+  "val_acc": 0.8680977788807545,
+  "confusion_matrix": [
+    [
+      3791,
+      468
+    ],
+    [
+      595,
+      3205
+    ]
+  ],
+  "classification_report": {
+    "no_person(0)": {
+      "precision": 0.8643410852713178,
+      "recall": 0.8901150504813337,
+      "f1-score": 0.8770387507229612,
+      "support": 4259.0
+    },
+    "person(1)": {
+      "precision": 0.872583719030765,
+      "recall": 0.843421052631579,
+      "f1-score": 0.8577545831660645,
+      "support": 3800.0
+    },
+    "accuracy": 0.8680977788807545,
+    "macro avg": {
+      "precision": 0.8684624021510414,
+      "recall": 0.8667680515564563,
+      "f1-score": 0.8673966669445128,
+      "support": 8059.0
+    },
+    "weighted avg": {
+      "precision": 0.8682276727245873,
+      "recall": 0.8680977788807545,
+      "f1-score": 0.8679458314133437,
+      "support": 8059.0
+    }
+  },
+  "num_samples": 8059,
+  "batch_size": 1,
+  "input_name": "input",
+  "output_name": "output"
+}

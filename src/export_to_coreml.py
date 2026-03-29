@@ -3,11 +3,11 @@ Export a trained PyTorch model to a Core ML .mlpackage file
 
 Example usage:
 # baseline
-python -m src.export_to_coreml --config_path src/config/baseline_mbv3s_vww96.yaml --ckpt_path saved_runs/2025-11-04_17-28-09_baseline_mbv3s_vww96/model.pt --output_path coreml_models/baseline_fp32.mlpackage
+python -m src.export_to_coreml --config_path src/config/baseline.yaml --ckpt_path saved_runs/2025-11-04_17-28-09_baseline_mbv3s_vww96/model.pt --output_path coreml_models/baseline/baseline.mlpackage
 # student
-python -m src.export_to_coreml --config_path src/config/student_mbv3s_vww96_refine.yaml --ckpt_path saved_runs/2025-10-31_21-20-46_student_mbv3s_vww96_kd_refine/model.pt --output_path coreml_models/student_fp32.mlpackage 
+python -m src.export_to_coreml --config_path src/config/student.yaml --ckpt_path saved_runs/2025-10-31_21-20-46_student_mbv3s_vww96/model.pt --output_path coreml_models/student/student.mlpackage 
 # pruned student
-python -m src.export_to_coreml --config_path src/config/student_mbv3s_vww96_prune.yaml --ckpt_path saved_runs/2025-11-15_13-13-17_student_mbv3s_vww96_prune/model_pruned_65_full.pt --output_path coreml_models/pruned_fp32.mlpackage
+python -m src.export_to_coreml --config_path src/config/prune.yaml --ckpt_path saved_runs/2025-11-15_13-13-17_pruned_student_mbv3s_vww96/model_pruned_65_full.pt --output_path coreml_models/pruned/pruned.mlpackage
 """
 
 import argparse
@@ -34,7 +34,7 @@ def _load_config(config_path: Path) -> dict:
 
 
 def _extract_model_from_checkpoint(ckpt_path: Path) -> Tuple[Optional[torch.nn.Module], Optional[dict]]:
-    """Extracts a model or state dict from a checkpoint file."""
+    """Extracts a model or state dict from a checkpoint file"""
     obj = torch.load(ckpt_path, map_location="cpu", weights_only=False)
 
     module = None
@@ -54,7 +54,7 @@ def _extract_model_from_checkpoint(ckpt_path: Path) -> Tuple[Optional[torch.nn.M
         elif isinstance(maybe_state, torch.nn.Module):
             state_dict = maybe_state.state_dict()
         else:
-            # Assume plain state dict (e.g., model.pt from train/kd)
+            # Assume plain state dict
             state_dict = obj
     else:
         state_dict = obj
@@ -69,7 +69,7 @@ def _extract_model_from_checkpoint(ckpt_path: Path) -> Tuple[Optional[torch.nn.M
 
 
 def _is_fx_graph_module(module: torch.nn.Module) -> bool:
-    """Check if a module is a torch.fx GraphModule."""
+    """Check if a module is a torch.fx GraphModule"""
     cls = module.__class__
     module_name = getattr(cls, "__module__", "")
     name = getattr(cls, "__name__", "")
@@ -83,7 +83,7 @@ def _is_fx_graph_module(module: torch.nn.Module) -> bool:
 
 
 def _build_model_from_state(cfg: dict, state_dict: dict) -> torch.nn.Module:
-    """Builds a model from config and loads the provided state dict."""
+    """Builds a model from config and loads the provided state dict"""
     model_cfg = cfg.get("model") or {}
     model_type = model_cfg.get("type")
     if not model_type:
@@ -97,7 +97,7 @@ def _build_model_from_state(cfg: dict, state_dict: dict) -> torch.nn.Module:
 
 
 def _load_model(config_path: Path, ckpt_path: Path) -> torch.nn.Module:
-    """Loads a model from config and checkpoint paths."""
+    """Loads a model from config and checkpoint paths"""
     cfg = _load_config(config_path)
     module, state_dict = _extract_model_from_checkpoint(ckpt_path)
 
@@ -105,7 +105,6 @@ def _load_model(config_path: Path, ckpt_path: Path) -> torch.nn.Module:
         if _is_fx_graph_module(module):
             raise ValueError(
                 "Checkpoint contains a PT2E/FX GraphModule, which cannot be exported to Core ML. "
-                "Provide a FP32 checkpoint saved as a standard nn.Module or state dict."
             )
         return module
 

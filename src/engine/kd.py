@@ -21,7 +21,7 @@ def kd_loss(
     confidence_gamma=None,
     margin_weight=0.0,
 ):
-    """ Knowledge Distillation Loss """
+    """Knowledge Distillation Loss"""
 
     ce = F.cross_entropy(student_logits, targets, label_smoothing=label_smoothing)
 
@@ -58,13 +58,12 @@ def kd_train_one_epoch(
     alpha,
     T,
     grad_clip_norm,
-    label_smoothing=0.0, # shouldn't really use label smoothing with kd
+    label_smoothing=0.0,
     teacher_input_size=None,
     confidence_gamma=None,
     margin_weight=0.0,
-    ema=None,
 ):
-    """ Train the student model for one epoch with knowledge distillation """
+    """Train the student model for one epoch with knowledge distillation"""
     
     student.train()
     teacher.eval()
@@ -108,9 +107,6 @@ def kd_train_one_epoch(
 
         if scheduler:
             scheduler.step()
-        
-        if ema:
-            ema.update(student)
         
         batch_size = labels.size(0)
         loss_sum += loss.item() * batch_size

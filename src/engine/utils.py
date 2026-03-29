@@ -1,5 +1,4 @@
 import copy
-import os
 import random, time, platform, subprocess, json
 from pathlib import Path
 from typing import Dict, Optional
@@ -15,7 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def set_seed(seed=42):
-    """Set random seeds and make CUDA execution deterministic."""
+    """Set random seeds and make CUDA execution deterministic"""
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -35,7 +34,7 @@ def set_seed(seed=42):
 
 
 def init_logging(config: dict, device: str, seed: int, determinism: Optional[Dict[str, object]] = None):
-    """Create a new run directory with timestamp, save config, determinism info, and system details."""
+    """Create a new run directory with timestamp, save config, determinism info, and system details"""
 
     # Check runs directory exists
     (REPO_ROOT / "runs").mkdir(exist_ok=True)

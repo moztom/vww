@@ -3,10 +3,10 @@ runs/
 exports/
 results/
 data/
-coreml_models/
-Pipfile.lock
 .DS_Store
 Untracked/
 .vscode
 .venv
 figures/
+experimentation_logs/
+.venv*/

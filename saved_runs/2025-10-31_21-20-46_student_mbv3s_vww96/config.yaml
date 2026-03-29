@@ -1,5 +1,5 @@
 meta:
-    name: teacher_mbv3l_vww96
+    name: student_mbv3s_vww96
     seed: 42
     device: auto
 data:
@@ -22,26 +22,36 @@ data:
             - 0.2
             - 0.0
         random_erasing:
-            - 0.25
+            - 0.0
             - 0.02
             - 0.12
             - 0.3
             - 3.3
 model:
-    type: mobilenet_v3_large
+    type: mobilenet_v3_small
     pretrained: true
 train:
-    epochs: 20
-    label_smoothing: 0.05
-    early_stop_patience: 5
-    grad_clip_norm: 0.0
+    epochs: 25
+    label_smoothing: 0.0
+    early_stop_patience: 10
+    grad_clip_norm: 2.0
     optimizer:
         name: adamw
-        lr: 0.0005
+        lr: 0.0007
         weight_decay: 0.0001
     scheduler:
         name: onecycle
-        max_lr: 0.0005
+        max_lr: 0.0007
         pct_start: 0.05
         div_factor: 20.0
         final_div_factor: 10000.0
+kd:
+    teacher:
+        arch: mobilenet_v3_large
+        checkpt: saved_runs/2025-10-26_17-53-08_teacher_mbv3l_vww96/model.pt
+    alpha: 0.55
+    temperature: 2.0
+    teacher_input_size: 96
+    label_smoothing: 0.01
+    confidence_gamma: 2.0
+    margin_weight: 0.03

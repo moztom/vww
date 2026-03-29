@@ -4,8 +4,6 @@ Summarise JPEG dimensions in the COCO train2017 and val2017 folders
 Usage: python scripts/get_dataset_stats.py
 """
 
-from __future__ import annotations
-
 import argparse
 import struct
 from pathlib import Path
@@ -14,7 +12,7 @@ from typing import Iterable, List, Tuple
 
 
 def jpeg_size(path: Path) -> Tuple[int, int]:
-    """Read width/height from a JPEG without third-party libraries."""
+    """Read width/height from a JPEG"""
     with path.open("rb") as handle:
         if handle.read(2) != b"\xFF\xD8":
             raise ValueError("Not a JPEG file.")
@@ -55,7 +53,7 @@ def iter_jpegs(paths: Iterable[Path]) -> Iterable[Path]:
         yield from directory.rglob("*.jpeg")
 
 
-def collect_dimensions(paths: Iterable[Path]) -> Tuple[List[int], List[int]]:
+def collect_dimensions(paths: Iterable[Path]) -> Tuple[List[Tuple[int, Path]], List[Tuple[int, Path]]]:
     widths, heights = [], []
     for image_path in paths:
         try:

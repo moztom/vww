@@ -1,7 +1,7 @@
 """
 Iterative structured pruning for MobileNetV3-S
 
-Default config: src/config/student_mbv3s_vww96_prune.yaml
+Default config: src/config/prune.yaml
 
 Example usage:
 python -m src.prune
@@ -12,7 +12,7 @@ import copy
 import json
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import torch
 from torch.optim import AdamW
@@ -26,7 +26,7 @@ from src.engine.finetune_utils import recalibrate_batch_norm
 
 
 def _strip_thop_stats(model: torch.nn.Module) -> None:
-    """Remove THOP-added buffers/attributes to keep checkpoints clean and fp32-only."""
+    """Remove THOP-added buffers/attributes to keep checkpoints fp32-only"""
     for module in model.modules():
         for name in ("total_ops", "total_params"):
             if name in getattr(module, "_buffers", {}):
@@ -39,7 +39,7 @@ def _strip_thop_stats(model: torch.nn.Module) -> None:
 
 
 def _prepare_for_save(model: torch.nn.Module) -> torch.nn.Module:
-    """Return a CPU, float32, THOP-clean copy for checkpointing."""
+    """Return a CPU, fp32, THOP-clean copy for checkpointing"""
     clone = copy.deepcopy(model).float().cpu()
     _strip_thop_stats(clone)
     return clone
@@ -99,7 +99,7 @@ def run_pruning(args: argparse.Namespace) -> None:
 
     # Baseline evaluation before any pruning
     baseline_start = time.perf_counter()
-    base_loss, base_acc, *_ = evaluate(model, ctx["val_loader"], device)
+    _, base_acc, *_ = evaluate(model, ctx["val_loader"], device)
     baseline_time = time.perf_counter() - baseline_start
     print(f"Baseline accuracy: {base_acc:.4f} (eval {baseline_time:.1f}s)")
     base_checkpoint_full = run_dir / "model_pruned_base_full.pt"
@@ -119,7 +119,7 @@ def run_pruning(args: argparse.Namespace) -> None:
         with open(run_dir / "metrics.jsonl", "a") as file:
             file.write(json.dumps({
                 "Baseline params": f"{params:,} ({params/1e6:.2f}M)",
-                "Basleine MACs": f"{macs:,} ({macs/1e6:.2f}M)",
+                "Baseline MACs": f"{macs:,} ({macs/1e6:.2f}M)",
                 "Baseline model size": f"{model_size_bytes:,} bytes ({model_size_mb:.2f} MB)",
             }) + "\n")
 
@@ -128,7 +128,7 @@ def run_pruning(args: argparse.Namespace) -> None:
 
     for target in targets:
         print("\n" + "-" * 70)
-        print(f"Pruning towards {target:.2%} global channel sparsity (expand convs only)")
+        print(f"Pruning towards {target:.2%} target")
 
         plan: List[ChannelScore] = pruner.plan_for_fraction(target, importance=importance)
         to_remove = len(plan)
@@ -146,15 +146,14 @@ def run_pruning(args: argparse.Namespace) -> None:
             print(f"Recalibrating BatchNorm statistics using the {bn_recalibrate_loader} loader...")
             recalibrate_batch_norm(model, recal_loader, device, bn_recalibrate_batches)
 
-        pre_va_loss, pre_va_acc, *_ = evaluate(model, ctx["val_loader"], device)
-        print(f"Post-surgery pre-recovery accuracy: {pre_va_acc:.4f}")
+        _, pre_va_acc, *_ = evaluate(model, ctx["val_loader"], device)
+        print(f"Post-prune, pre-recovery accuracy: {pre_va_acc:.4f}")
 
         finetune_lr = _lr_for_target(finetune_cfg, target)
         optimizer = AdamW(model.parameters(), lr=finetune_lr, weight_decay=weight_decay)
         scheduler = None
         patience = 0
         best_step_acc = -1.0
-        best_step_loss = float("inf")
         best_epoch = 0
         step_checkpoint_full = run_dir / f"model_pruned_{int(round(target * 100))}_full.pt"
 
@@ -217,7 +216,6 @@ def run_pruning(args: argparse.Namespace) -> None:
 
             if va_acc > best_step_acc:
                 best_step_acc = va_acc
-                best_step_loss = va_loss
                 best_epoch = epoch
                 torch.save({"model": _prepare_for_save(model)}, step_checkpoint_full)
                 patience = 0
@@ -233,7 +231,7 @@ def run_pruning(args: argparse.Namespace) -> None:
             model.load_state_dict(saved_model.state_dict())
             model.to(device)
 
-        final_va_loss, final_va_acc, *_ = evaluate(model, ctx["val_loader"], device)
+        _, final_va_acc, *_ = evaluate(model, ctx["val_loader"], device)
         print(
             f"Best recovery epoch {best_epoch}: val acc {best_step_acc:.4f} | "
             f"final eval {final_va_acc:.4f}"
@@ -334,7 +332,7 @@ def _format_fraction(frac: float) -> str:
 
 def main():
     parser = argparse.ArgumentParser()
-    default_config = Path("src") / "config" / "student_mbv3s_vww96_prune.yaml"
+    default_config = Path("src") / "config" / "prune.yaml"
 
     parser.add_argument(
         "--config_path",

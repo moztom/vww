@@ -1,0 +1,46 @@
+{
+  "model_path": "coreml_models/quantized/quantized.mlpackage",
+  "data_path": "data/vww96",
+  "val_acc": 0.8584191587045539,
+  "confusion_matrix": [
+    [
+      3738,
+      521
+    ],
+    [
+      620,
+      3180
+    ]
+  ],
+  "classification_report": {
+    "no_person(0)": {
+      "precision": 0.8577329050022946,
+      "recall": 0.8776708147452453,
+      "f1-score": 0.867587327376117,
+      "support": 4259.0
+    },
+    "person(1)": {
+      "precision": 0.859227235882194,
+      "recall": 0.8368421052631579,
+      "f1-score": 0.8478869484068791,
+      "support": 3800.0
+    },
+    "accuracy": 0.8584191587045539,
+    "macro avg": {
+      "precision": 0.8584800704422443,
+      "recall": 0.8572564600042016,
+      "f1-score": 0.857737137891498,
+      "support": 8059.0
+    },
+    "weighted avg": {
+      "precision": 0.8584375156665975,
+      "recall": 0.8584191587045539,
+      "f1-score": 0.8582981550119149,
+      "support": 8059.0
+    }
+  },
+  "num_samples": 8059,
+  "batch_size": 1,
+  "input_name": "input",
+  "output_name": "var_763"
+}

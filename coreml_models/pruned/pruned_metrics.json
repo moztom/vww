@@ -1,0 +1,46 @@
+{
+  "model_path": "coreml_models/pruned/pruned.mlpackage",
+  "data_path": "data/vww96",
+  "val_acc": 0.859163667948877,
+  "confusion_matrix": [
+    [
+      3761,
+      498
+    ],
+    [
+      637,
+      3163
+    ]
+  ],
+  "classification_report": {
+    "no_person(0)": {
+      "precision": 0.8551614370168258,
+      "recall": 0.8830711434609063,
+      "f1-score": 0.8688922259443225,
+      "support": 4259.0
+    },
+    "person(1)": {
+      "precision": 0.8639715924610762,
+      "recall": 0.8323684210526315,
+      "f1-score": 0.8478756198900952,
+      "support": 3800.0
+    },
+    "accuracy": 0.859163667948877,
+    "macro avg": {
+      "precision": 0.8595665147389511,
+      "recall": 0.8577197822567689,
+      "f1-score": 0.8583839229172088,
+      "support": 8059.0
+    },
+    "weighted avg": {
+      "precision": 0.8593156237258656,
+      "recall": 0.859163667948877,
+      "f1-score": 0.8589824228662652,
+      "support": 8059.0
+    }
+  },
+  "num_samples": 8059,
+  "batch_size": 1,
+  "input_name": "input",
+  "output_name": "var_763"
+}

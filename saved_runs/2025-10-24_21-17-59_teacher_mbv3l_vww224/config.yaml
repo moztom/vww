@@ -1,10 +1,10 @@
 meta:
-    name: teacher_mbv3l_vww96
+    name: teacher_mbv3l_vww224
     seed: 42
     device: auto
 data:
-    path: data/vww96
-    batch: 256
+    path: data/vww224
+    batch: 128
     num_workers: 4
     mean:
         - 0.485
@@ -31,9 +31,9 @@ model:
     type: mobilenet_v3_large
     pretrained: true
 train:
-    epochs: 20
+    epochs: 15
     label_smoothing: 0.05
-    early_stop_patience: 5
+    early_stop_patience: 3
     grad_clip_norm: 0.0
     optimizer:
         name: adamw

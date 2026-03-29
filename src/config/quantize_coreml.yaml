@@ -1,0 +1,17 @@
+meta:
+    name: 'quantize_coreml'
+
+coreml_quant:
+    input_path: 'coreml_models/pruned/pruned.mlpackage'
+    output_path: 'coreml_models/quantized/quantized.mlpackage'
+    mode: 'linear_symmetric'
+    dtype: 'int8'
+
+eval:
+    enabled: true
+    data_path: 'data/vww96'
+    batch_size: 1
+    num_workers: 4
+    save_cm_plot: false
+    cm_normalize: false
+    save_per_class_metrics: true

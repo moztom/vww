@@ -1,21 +1,18 @@
 """
 Evaluate an exported Core ML .mlpackage model on the VWW validation set.
 
-Examples:
+Example usage:
 # baseline
-python -m src.evaluate_coreml_model --model_path coreml_models/baseline_fp32.mlpackage --data_path data/vww96
-
+python -m src.evaluate_coreml_model --model_path coreml_models/baseline/baseline.mlpackage
 # student
-python -m src.evaluate_coreml_model --model_path coreml_models/student_fp32.mlpackage --data_path data/vww96
-
+python -m src.evaluate_coreml_model --model_path coreml_models/student/student.mlpackage
 # pruned
-python -m src.evaluate_coreml_model --model_path coreml_models/pruned_fp32.mlpackage --data_path data/vww96
-
-# quantized (int8 weights, still float inputs)
-python -m src.evaluate_coreml_model --model_path coreml_models/pruned_int8.mlpackage --data_path data/vww96 --cpu_only
+python -m src.evaluate_coreml_model --model_path coreml_models/pruned/pruned.mlpackage
+# quantized
+python -m src.evaluate_coreml_model --model_path coreml_models/quantized/quantized.mlpackage
 
 # optional confusion matrix figure + per-class metrics CSV
-python -m src.evaluate_coreml_model --model_path coreml_models/baseline_fp32.mlpackage --data_path data/vww96 \
+python -m src.evaluate_coreml_model --model_path coreml_models/baseline/baseline.mlpackage \
   --save_cm_plot --cm_normalize \
   --save_per_class_metrics
 """
@@ -169,7 +166,6 @@ def evaluate_coreml_model(
     data_path: Path,
     batch_size: int = 1,
     num_workers: int = 4,
-    cpu_only: bool = False,
     save_cm_plot: bool = False,
     cm_normalize: bool = False,
     save_per_class_metrics: bool = False,
@@ -182,10 +178,8 @@ def evaluate_coreml_model(
     if not data_path.exists():
         raise FileNotFoundError(f"Data path not found: {data_path}")
 
-    if cpu_only:
-        mlmodel = ct.models.MLModel(str(model_path), compute_units=ct.ComputeUnit.CPU_ONLY)
-    else:
-        mlmodel = ct.models.MLModel(str(model_path))
+    # set compute units to CPU only for accurate comparison between models
+    mlmodel = ct.models.MLModel(str(model_path), compute_units=ct.ComputeUnit.CPU_ONLY)
     input_name, output_name = _get_io_names(mlmodel)
 
     val_loader = build_dataloaders(
@@ -237,7 +231,6 @@ def evaluate_coreml_model(
         "classification_report": cls_report_dict,
         "num_samples": int(len(gts_arr)),
         "batch_size": batch_size,
-        "cpu_only": cpu_only,
         "input_name": input_name,
         "output_name": output_name,
     }
@@ -254,9 +247,9 @@ def evaluate_coreml_model(
     csv_out = None
 
     if save_cm_plot:
-        cm_out = Path(__file__).resolve().parents[1] / "figures" / f"{model_path.stem}_cm.pdf"
+        cm_out = model_path.parent / f"{model_path.stem}_cm.pdf"
         _save_confusion_matrix_plot(cm=cm, class_names=target_names, out_path=cm_out, normalize=cm_normalize)
-        print(f"Saved confusion matrix figure to {Path('figures') / cm_out.name}")
+        print(f"Saved confusion matrix figure to {cm_out}")
 
     if save_per_class_metrics:
         per_class_rows = _get_per_class_metrics(cls_report_dict, class_keys=target_names)
@@ -276,14 +269,9 @@ def evaluate_coreml_model(
 def main():
     parser = argparse.ArgumentParser(description="Evaluate a Core ML .mlpackage model on the VWW val set.")
     parser.add_argument("--model_path", type=Path, required=True, help="Path to the Core ML .mlpackage file.")
-    parser.add_argument("--data_path", type=Path, required=True, help="Dataset root containing val/0 and val/1 folders (e.g., data/vww96).")
+    parser.add_argument("--data_path", type=Path, default=Path("data/vww96"), help="Dataset root containing val/0 and val/1 folders (e.g., data/vww96).")
     parser.add_argument("--batch_size", type=int, default=1, help="Batch size for evaluation. Must match the batch dimension used during export.")
     parser.add_argument("--num_workers", type=int, default=4, help="Number of dataloader workers.")
-    parser.add_argument(
-        "--cpu_only",
-        action="store_true",
-        help="If set, force Core ML evaluation to use CPU only.",
-    )
     parser.add_argument(
         "--save_cm_plot",
         action="store_true",
@@ -306,7 +294,6 @@ def main():
         data_path=args.data_path,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
-        cpu_only=args.cpu_only,
         save_cm_plot=args.save_cm_plot,
         cm_normalize=args.cm_normalize,
         save_per_class_metrics=args.save_per_class_metrics,

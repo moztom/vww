@@ -41,8 +41,6 @@ def _build_quant_config(quant_cfg: dict):
             dtype=dtype,
         )
     )
-
-
 def quantize_coreml_model(input_path: Path, output_path: Path, quant_cfg: dict) -> Path:
     input_path = input_path.expanduser()
     output_path = output_path.expanduser()
@@ -110,7 +108,6 @@ def run_coreml_quantization(config_path: Path) -> dict:
             data_path=Path(data_path),
             batch_size=int(eval_cfg.get("batch_size", 1)),
             num_workers=int(eval_cfg.get("num_workers", 4)),
-            cpu_only=bool(eval_cfg.get("cpu_only", False)),
             save_cm_plot=bool(eval_cfg.get("save_cm_plot", False)),
             cm_normalize=bool(eval_cfg.get("cm_normalize", False)),
             save_per_class_metrics=bool(eval_cfg.get("save_per_class_metrics", False)),
@@ -126,7 +123,7 @@ def run_coreml_quantization(config_path: Path) -> dict:
                 else None
             ),
             "val_acc": eval_result["metrics"]["val_acc"],
-            "cpu_only": bool(eval_cfg.get("cpu_only", False)),
+            "cpu_only": True,
         }
 
     summary_path = output_path.parent / f"{output_path.stem}_quant_summary.json"

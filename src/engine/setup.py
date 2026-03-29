@@ -24,7 +24,7 @@ def build_context(config_path: Path, stage: str = None) -> dict:
     device = _pick_device(cfg["meta"].get("device", "auto"))
 
     # data
-    tr_loader, val_loader, class_weight_tensor = build_dataloaders(
+    tr_loader, val_loader = build_dataloaders(
         data_path=Path(cfg["data"]["path"]),
         batch_size=cfg["data"]["batch"],
         num_workers=cfg["data"]["num_workers"],
@@ -48,12 +48,8 @@ def build_context(config_path: Path, stage: str = None) -> dict:
 
     # criterion/loss
     criterion = CrossEntropyLoss(
-        weight=class_weight_tensor.to(device) if class_weight_tensor else None,
         label_smoothing=cfg["train"]["label_smoothing"],
     )
-
-    # what is class_weight_tensor for?
-    # It's for handling class imbalance in the dataset by assigning different weights to each class during loss
 
     # optimizer
     optimizer = _make_optimizer(cfg, model)
@@ -77,8 +73,6 @@ def build_context(config_path: Path, stage: str = None) -> dict:
         "max_patience": cfg["train"]["early_stop_patience"],
         "epochs": cfg["train"]["epochs"],
         "grad_clip_norm": cfg["train"].get("grad_clip_norm", 0.0),
-        "freeze_backbone_epochs": cfg["train"].get("freeze_backbone_epochs", 0),
-        "ema_decay": cfg["train"].get("ema_decay"),
         "bn_recalibrate_epoch": cfg["train"].get("bn_recalibrate_epoch"),
         "bn_recalibrate_max_batches": cfg["train"].get("bn_recalibrate_max_batches"),
     }
@@ -106,17 +100,9 @@ def build_context(config_path: Path, stage: str = None) -> dict:
             "teacher": teacher,
             "kd_alpha": float(kd_cfg.get("alpha", 0.5)),
             "kd_temp": float(kd_cfg.get("temperature", 4.0)),
-            "kd_alpha_start": kd_cfg.get("alpha_start", None),
-            "kd_alpha_end": kd_cfg.get("alpha_end", None),
-            "kd_alpha_warmup_epochs": kd_cfg.get("alpha_warmup_epochs", None),
-            "kd_alpha_decay_end_epoch": kd_cfg.get("alpha_decay_end_epoch", None),
-            "kd_alpha_constant": kd_cfg.get("alpha_constant", None),
             "kd_teacher_input_size": kd_cfg.get("teacher_input_size"),
             "kd_confidence_gamma": kd_cfg.get("confidence_gamma"),
             "kd_margin_weight": float(kd_cfg.get("margin_weight", 0.0)),
-            "kd_margin_weight_start": kd_cfg.get("margin_weight_start"),
-            "kd_margin_weight_end": kd_cfg.get("margin_weight_end"),
-            "kd_margin_decay_end_epoch": kd_cfg.get("margin_weight_decay_end_epoch"),
             "kd_label_smoothing": kd_cfg.get("label_smoothing", 0.0),
         })
 
@@ -131,8 +117,14 @@ def _load_config(path: Path) -> dict:
     with open(path, "r") as file:
         config = yaml.safe_load(file)
 
-    for key in ["meta", "data", "model", "train"]:
-        assert key in config, f"Missing '{key}' in {path}"
+    if not isinstance(config, dict):
+        raise ValueError(f"Config at {path} must be a YAML mapping.")
+
+    required_keys = ["meta", "data", "model", "train"]
+    missing_keys = [key for key in required_keys if key not in config]
+    if missing_keys:
+        missing = ", ".join(repr(key) for key in missing_keys)
+        raise ValueError(f"Missing required top-level keys in {path}: {missing}")
 
     return config
 

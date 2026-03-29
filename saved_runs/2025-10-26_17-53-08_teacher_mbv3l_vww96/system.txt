@@ -1,9 +1,9 @@
-python: 3.11.3
-pytorch: 2.6.0+cu124
-device: cuda
-cuda_name: NVIDIA GeForce RTX 3080 Ti
-platform: Windows-10-10.0.26100-SP0
-cpu: AMD64 Family 25 Model 33 Stepping 2, AuthenticAMD
+python: 3.12.6
+pytorch: 2.9.0
+device: mps
+cuda_name: NA
+platform: macOS-26.3.1-arm64-arm-64bit
+cpu: arm
 seed: 42
 git_commit: e542a79
 start_time: 2025-10-26_17-53-08_teacher_mbv3l_vww96

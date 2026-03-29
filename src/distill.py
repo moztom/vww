@@ -1,7 +1,7 @@
 """
 Knowledge distillation for training of student models
 
-Default config: src/config/student_mbv3s_vww96.yaml
+Default config: src/config/student.yaml
 
 Example usage: python -m src.distill
 """
@@ -17,8 +17,6 @@ from src.engine.setup import build_context
 from src.engine.kd import kd_train_one_epoch
 from src.engine.train_loops import evaluate
 from src.engine.utils import log_epoch, compute_model_complexity
-from src.engine.finetune_utils import set_backbone_trainable
-from src.engine.ema import ModelEMA
 
 
 def run_distillation(args: argparse.Namespace):
@@ -32,24 +30,10 @@ def run_distillation(args: argparse.Namespace):
     patience = 0
     overall_start = time.perf_counter()
 
-    # ema
-    ema = None
-    if ctx.get("ema_decay"):
-        ema = ModelEMA(ctx["model"], ctx["ema_decay"])
-        ema.to(ctx["device"])
-
-    # backbone freeze
-    freeze_epochs = ctx.get("freeze_backbone_epochs", 0) or 0
-    backbone_frozen = False
-    if freeze_epochs > 0:
-        set_backbone_trainable(ctx["model"], False)
-        backbone_frozen = True
-        print(f"Freezing backbone for first {freeze_epochs} epochs")
-
     for epoch in range(1, ctx["epochs"] + 1):
         epoch_start = time.perf_counter()
-        epoch_alpha = _compute_alpha(ctx, epoch)
-        epoch_margin = _compute_margin_weight(ctx, epoch)
+        epoch_alpha = float(ctx["kd_alpha"])
+        epoch_margin = float(ctx.get("kd_margin_weight", 0.0))
 
         tr_loss, tr_acc, tr_ce, tr_kl, tr_margin = kd_train_one_epoch(
             ctx["model"],
@@ -65,11 +49,9 @@ def run_distillation(args: argparse.Namespace):
             teacher_input_size=ctx.get("kd_teacher_input_size"),
             confidence_gamma=ctx.get("kd_confidence_gamma"),
             margin_weight=epoch_margin,
-            ema=ema,
         )
 
-        model_for_eval = ema.ema_model if ema else ctx["model"]
-        va_loss, va_acc, *_ = evaluate(model_for_eval, ctx["val_loader"], ctx["device"])
+        va_loss, va_acc, *_ = evaluate(ctx["model"], ctx["val_loader"], ctx["device"])
 
         epoch_elapsed = time.perf_counter() - epoch_start
         elapsed_total = time.perf_counter() - overall_start
@@ -93,7 +75,6 @@ def run_distillation(args: argparse.Namespace):
         margin_str = f", margin {tr_margin:.4f}" if tr_margin > 0 else ""
         print(
             f"[{epoch}/{ctx['epochs']}] "
-            f"alpha {epoch_alpha:.3f} | margin_w {epoch_margin:.4f} | "
             f"train loss {tr_loss:.4f} (ce {tr_ce:.4f}, kl {tr_kl:.4f}{margin_str}) acc {tr_acc:.4f} | "
             f"val loss {va_loss:.4f} acc {va_acc:.4f} | "
             f"epoch time {epoch_elapsed:.1f}s | elapsed time {elapsed_total/60:.1f}m"
@@ -105,7 +86,7 @@ def run_distillation(args: argparse.Namespace):
             patience = 0
 
             torch.save(
-                model_for_eval.state_dict(),
+                ctx["model"].state_dict(),
                 ctx["run_dir"] / "model.pt"
             )
 
@@ -114,25 +95,16 @@ def run_distillation(args: argparse.Namespace):
             if patience >= ctx["max_patience"]:
                 print(f"No improvement in {ctx['max_patience']} epochs, stopping early")
                 break
-        
-        if backbone_frozen and epoch >= freeze_epochs:
-            set_backbone_trainable(ctx["model"], True)
-            backbone_frozen = False
-            print("Backbone unfrozen")
 
     total_elapsed = time.perf_counter() - overall_start
 
     # Final metrics ----------
     
     # Reload the best checkpoint before computing final metrics
-    final_model = ema.ema_model if ema else ctx["model"]
-    try:
-        best_ckpt_path = ctx["run_dir"] / "model.pt"
-        checkpt = torch.load(best_ckpt_path, map_location="cpu")
-        final_model.load_state_dict(checkpt, strict=True)
-    except Exception:
-        # If loading fails, evaluate with current in-memory weights
-        pass
+    final_model = ctx["model"]
+    best_ckpt_path = ctx["run_dir"] / "model.pt"
+    checkpt = torch.load(best_ckpt_path, map_location="cpu")
+    final_model.load_state_dict(checkpt, strict=True)
 
     va_loss, va_acc, preds, gts = evaluate(
         final_model, ctx["val_loader"], ctx["device"], metrics=True
@@ -216,89 +188,9 @@ def run_distillation(args: argparse.Namespace):
     # ---------------------
 
 
-def _compute_alpha(ctx: dict, epoch: int) -> float:
-    """Epoch-wise KD alpha schedule: CE-heavy warmup then linear to target
-
-    Optional context keys (if present in config):
-        - kd_alpha_start
-        - kd_alpha_end
-        - kd_alpha_warmup_epochs
-        - kd_alpha_decay_end_epoch
-        - kd_alpha_constant
-
-    Defaults if constant flag not set:
-        start=0.9, end=ctx["kd_alpha"], warmup=5, decay_end=ctx["epochs"].
-    """
-
-    # Don't change alpha if constant flag set
-    if ctx.get("kd_alpha_constant"):
-        return float(ctx["kd_alpha"])
-    
-    total_epochs = ctx["epochs"]
-    start = ctx.get("kd_alpha_start", None)
-    end = ctx.get("kd_alpha_end", None)
-    if start is None:
-        start = 0.9
-    if end is None:
-        end = ctx["kd_alpha"]
-    warmup = ctx.get("kd_alpha_warmup_epochs", None)
-    if warmup is None:
-        warmup = 5
-    decay_end = ctx.get("kd_alpha_decay_end_epoch", None)
-    if decay_end is None:
-        decay_end = total_epochs
-
-    # Clamp and cast
-    warmup = max(0, int(warmup))
-    decay_end = max(warmup + 1, int(decay_end))
-    epoch = int(epoch)
-
-    if warmup > 0 and epoch <= warmup:
-        return float(start)
-
-    if epoch >= decay_end:
-        return float(end)
-
-    # Linear decay from start -> end between warmup+1 and decay_end
-    span = max(1, decay_end - warmup)
-    t = (epoch - warmup) / span
-    return float(start + t * (end - start))
-
-
-def _compute_margin_weight(ctx: dict, epoch: int) -> float:
-    """Optional schedule for margin loss weight"""
-
-    base = float(ctx.get("kd_margin_weight", 0.0))
-    start = ctx.get("kd_margin_weight_start")
-    end = ctx.get("kd_margin_weight_end")
-    decay_end = ctx.get("kd_margin_decay_end_epoch")
-
-    # If no schedule provided fall back to constant weight
-    if start is None and end is None and decay_end is None:
-        return base
-
-    if start is None:
-        start = base
-    if end is None:
-        end = base
-    if decay_end is None:
-        decay_end = ctx["epochs"]
-
-    start = float(start)
-    end = float(end)
-    decay_end = max(1, int(decay_end))
-
-    if epoch >= decay_end:
-        return end
-
-    span = max(1, decay_end - 1)
-    progress = max(0.0, min(1.0, (epoch - 1) / span))
-    return float(start + progress * (end - start))
-
-
 def main():
     parser = argparse.ArgumentParser()
-    default_config = Path("src") / "config" / "student_mbv3s_vww96.yaml"
+    default_config = Path("src") / "config" / "student.yaml"
 
     parser.add_argument(
         "--config_path",
@@ -307,10 +199,7 @@ def main():
         help="Path to kd YAML config"
     )
     parser.add_argument(
-        "--debug",
-        required=False,
-        type=bool,
-        default=False
+        "--debug", action="store_true"
     )
     args = parser.parse_args()
 

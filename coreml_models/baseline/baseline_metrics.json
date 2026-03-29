@@ -1,0 +1,46 @@
+{
+  "model_path": "coreml_models/baseline/baseline.mlpackage",
+  "data_path": "data/vww96",
+  "val_acc": 0.8513463208834843,
+  "confusion_matrix": [
+    [
+      3687,
+      572
+    ],
+    [
+      626,
+      3174
+    ]
+  ],
+  "classification_report": {
+    "no_person(0)": {
+      "precision": 0.8548574078367726,
+      "recall": 0.8656961728105189,
+      "f1-score": 0.8602426504899673,
+      "support": 4259.0
+    },
+    "person(1)": {
+      "precision": 0.8473037907100908,
+      "recall": 0.8352631578947368,
+      "f1-score": 0.8412403922608004,
+      "support": 3800.0
+    },
+    "accuracy": 0.8513463208834843,
+    "macro avg": {
+      "precision": 0.8510805992734316,
+      "recall": 0.8504796653526279,
+      "f1-score": 0.8507415213753838,
+      "support": 8059.0
+    },
+    "weighted avg": {
+      "precision": 0.8512957072434743,
+      "recall": 0.8513463208834843,
+      "f1-score": 0.8512826577773684,
+      "support": 8059.0
+    }
+  },
+  "num_samples": 8059,
+  "batch_size": 1,
+  "input_name": "input",
+  "output_name": "output"
+}

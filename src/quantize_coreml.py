@@ -1,7 +1,7 @@
 """
 Weight-only post-training quantization for a Core ML model from a YAML config.
 
-Default config: src/config/quantize_coreml_int8.yaml
+Default config: src/config/quantize_coreml.yaml
 
 Example usage:
 python -m src.quantize_coreml
@@ -21,7 +21,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Apply weight-only Core ML quantization from a YAML config."
     )
-    default_config = Path("src") / "config" / "quantize_coreml_int8.yaml"
+    default_config = Path("src") / "config" / "quantize_coreml.yaml"
     parser.add_argument(
         "--config_path",
         type=Path,

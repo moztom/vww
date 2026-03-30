@@ -29,6 +29,7 @@ data:
             - 3.3
 model:
     type: mobilenet_v3_small
+    pretrained: true
 train:
     epochs: 10
     early_stop_patience: 5

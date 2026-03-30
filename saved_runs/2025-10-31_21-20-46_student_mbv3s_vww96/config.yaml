@@ -48,6 +48,7 @@ train:
 kd:
     teacher:
         arch: mobilenet_v3_large
+        pretrained: true
         checkpt: saved_runs/2025-10-26_17-53-08_teacher_mbv3l_vww96/model.pt
     alpha: 0.55
     temperature: 2.0

@@ -1,6 +1,6 @@
 # VWW
 
-Repository for the MSc dissertation project: "Building Lightweight Neural Networks".
+Main repository for the MSc dissertation project: "Building Lightweight Neural Networks".
 
 A repeatable training, compression, and deployment pipeline for the Visual Wake Words (VWW) task.
 

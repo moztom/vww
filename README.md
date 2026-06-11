@@ -4,6 +4,8 @@ Main repository for the MSc dissertation project: "Building Lightweight Neural N
 
 A repeatable training, compression, and deployment pipeline for the Visual Wake Words (VWW) task.
 
+**Acheived MSc distinction classification**
+
 ## Setup
 
 This repo uses Python `3.12.6`.
